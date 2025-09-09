@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+	<AllowUnsafeBlocks>true</AllowUnsafeBlocks> <!-- Needed because of OpenAL -->
+    
+	<AssemblyName>InfDun</AssemblyName>
+    <Version>0.1.0</Version>
+    <Authors>siljam</Authors>
+    <Company>AshProject</Company>
+	
+	<ApplicationIcon>res/icon.ico</ApplicationIcon>
+	
+	<PublishSingleFile>true</PublishSingleFile>
+	<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+	
+	<!-- <DefineConstants>DEBUG_TIME</DefineConstants> -->
+  </PropertyGroup>
+
+  <ItemGroup>
+	<EmbeddedResource Include="res/**" />
+	<EmbeddedResource Include="shaders/*" />
+	
+    <PackageReference Include="AshLib" Version="3.4.0" />
+    <PackageReference Include="OpenTK" Version="4.9.4" />
+    <PackageReference Include="StbImageSharp" Version="2.30.15" />
+    <PackageReference Include="StbImageWriteSharp" Version="1.16.7" />
+    <PackageReference Include="StbVorbisSharp" Version="1.22.4" />
+  </ItemGroup>
+  
+  <ItemGroup Condition="('$(Configuration)' == 'Debug' and '$(OS)' == 'Windows_NT') or '$(RuntimeIdentifier)' == 'win-x64' or '$(RuntimeIdentifier)' == 'win-x86' or '$(RuntimeIdentifier)' == 'win-arm64'">
+	<None Update="lib/openal32.dll">
+		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		<Link>%(Filename)%(Extension)</Link>
+		<TargetPath>%(Filename)%(Extension)</TargetPath>
+	</None>
+  </ItemGroup>
+  
+</Project>
