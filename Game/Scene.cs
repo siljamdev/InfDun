@@ -164,7 +164,7 @@ class Scene{
 		cam.moveFast(p.position);
 		
 		//Tiles
-		tiles = generateWalls(m, y, exitPos, rand).Cast<int>().ToArray();
+		tiles = generateTiles(m, y, exitPos, levelNum, rand).Cast<int>().ToArray();
 		transitable = tiles.Select(n => !intransitableTiles.Contains(n)).ToArray();
 		
 		//Tile mesh
@@ -571,7 +571,7 @@ class Scene{
 	}
 	
 	//A bit messy, but it works
-	static int[,] generateWalls(bool[,] m, Vector2i startPos, Vector2i exitPos, Random rand){
+	static int[,] generateTiles(bool[,] m, Vector2i startPos, Vector2i exitPos, int levelNum, Random rand){
 		int[,] w = new int[m.GetLength(0), m.GetLength(1)];
 		
 		//Helper func
@@ -582,6 +582,20 @@ class Scene{
 			return false;
 		}
 		
+		int getFloorTile(){
+			if(rand.Next(8) == 0){
+				if(levelNum > 5 && rand.Next(100) == 0){
+					return 19; //Skull
+				}else if(rand.Next(4) == 0){
+					return 20; //Fungi
+				}else{
+					return 2; //Puddle
+				}
+			}else{
+				return 1;
+			}
+		}
+		
 		for(int i = 0; i < m.GetLength(1); i++){
 			for(int j = 0; j < m.GetLength(0); j++){
 				if(get(i, j)){
@@ -590,7 +604,7 @@ class Scene{
 					}else if(new Vector2i(i, j) == startPos){
 						w[j, i] = 18;
 					}else{
-						w[j, i] = rand.Next(8) == 0 ? (rand.Next(100) == 0 ? 19 : (rand.Next(4) == 0 ? 20 : 2)) : 1;
+						w[j, i] = getFloorTile();
 					}
 				}else if(get(i, j-1)){
 					w[j, i] = rand.Next(24) == 0 ? 16 : 3;

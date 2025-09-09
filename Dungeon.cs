@@ -6,6 +6,7 @@ using OpenTK;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.Common;
 using OpenTK.Graphics.OpenGL;
+using OpenTK.Graphics.OpenGL;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using OpenTK.Windowing.Common.Input;
@@ -21,7 +22,7 @@ using Keys = OpenTK.Windowing.GraphicsLibraryFramework.Keys;
 
 partial class Dungeon : GameWindow{
 	
-	public const string version = "0.1.0";
+	public const string version = "0.1.1";
 	
 	KeyBind fullscreen = new KeyBind(Keys.F11, false);
 	KeyBind screenshot = new KeyBind(Keys.F2, false);
@@ -72,6 +73,10 @@ partial class Dungeon : GameWindow{
 		}
 	}
 	
+	#if DEBUG_GENERAL
+		DebugProc DebugMessageDelegate;
+	#endif
+	
 	bool isFullscreened;
 	
 	float maxFps = 144f;
@@ -83,17 +88,46 @@ partial class Dungeon : GameWindow{
 			}
 		}
 		
-		using(Dungeon dun = new Dungeon()){
-			dun.Run();
+		#if DEBUG_GENERAL
+			using(Dungeon dun = new Dungeon(new NativeWindowSettings{
+				Title = "Dungeon Game - BETA",
+				Vsync = VSyncMode.On,
+				ClientSize = new Vector2i(640, 480),
+				Icon = getIcon(),
+				Flags = ContextFlags.Debug
+			})){
+				dun.Run();
+			}
+		#else
+			using(Dungeon dun = new Dungeon(new NativeWindowSettings{
+				Title = "Dungeon Game - BETA",
+				Vsync = VSyncMode.On,
+				ClientSize = new Vector2i(640, 480),
+				Icon = getIcon()
+			})){
+				dun.Run();
+			}
+		#endif
+	}
+	
+	static WindowIcon getIcon(){
+		using Stream s = AssemblyFiles.getStream("res.icon.png");
+		
+		//Generate the image and put it as icon
+		ImageResult image = ImageResult.FromStream(s, StbImageSharp.ColorComponents.RedGreenBlueAlpha);
+		if(image == null || image.Data == null){
+			return null;
 		}
+		
+		OpenTK.Windowing.Common.Input.Image i = new OpenTK.Windowing.Common.Input.Image(image.Width, image.Height, image.Data);
+		WindowIcon w = new WindowIcon(i);
+		
+		return w;
 	}
 	
 	//new NativeWindowSettings{NumberOfSamples = 4}
-	Dungeon() : base(GameWindowSettings.Default, NativeWindowSettings.Default){
-		CenterWindow(new Vector2i(640, 480));
-		Title = "Dungeon Game - BETA";
-		
-		VSync = VSyncMode.On;
+	Dungeon(NativeWindowSettings n) : base(GameWindowSettings.Default, n){
+		CenterWindow();
 	}
 	
 	void initialize(){
@@ -103,12 +137,23 @@ partial class Dungeon : GameWindow{
 		string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
 		dep = new Dependencies(appDataPath + "/ashproject/infdun", true, new string[]{"screenshots"}, null);
 		
-		setIcon();
-		
 		//Before config bc config modifies it
 		sm = new SoundManager();
 		
 		initializeConfig();
+		
+		#if DEBUG_GENERAL
+			DebugMessageDelegate = OnDebugMessage;
+			
+			GL.DebugMessageCallback(DebugMessageDelegate, IntPtr.Zero);
+			GL.Enable(EnableCap.DebugOutput);
+			
+			// Optionally
+			GL.Enable(EnableCap.DebugOutputSynchronous);
+			
+			Console.WriteLine("Testing stdout");
+			Console.Error.WriteLine("Testing stderr");
+		#endif
 		
 		ren = new Renderer(this);
 		
@@ -308,6 +353,30 @@ partial class Dungeon : GameWindow{
 		sm.checkErrors();
 	}
 	
+	#if DEBUG_GENERAL
+		void OnDebugMessage(
+			DebugSource source,     // Source of the debugging message.
+			DebugType type,         // Type of the debugging message.
+			int id,                 // ID associated with the message.
+			DebugSeverity severity, // Severity of the message.
+			int length,             // Length of the string in pMessage.
+			IntPtr pMessage,        // Pointer to message string.
+			IntPtr pUserParam)      // The pointer you gave to OpenGL, explained later.
+		{
+			// In order to access the string pointed to by pMessage, you can use Marshal
+			// class to copy its contents to a C# string without unsafe code. You can
+			// also use the new function Marshal.PtrToStringUTF8 since .NET Core 1.1.
+			string message = Marshal.PtrToStringUTF8(pMessage, length);
+			
+			Console.Error.WriteLine("Error: Severity: " + severity + " Source: " + source + " Type: " + type + " Id: " + id + " Message: " + message);
+			//Console.Error.WriteLine("[{0} source={1} type={2} id={3}] {4}", severity, source, type, id, message);
+			
+			if(ren != null){
+				ren.setCornerInfo("Error: " + source, Renderer.redTextColor);
+			}
+		}
+	#endif
+	
 	void dispose(){
 		foreach((int VAO, int? VBO) in meshesMarkedForDisposal){		
 			GL.DeleteVertexArray(VAO);
@@ -351,21 +420,6 @@ partial class Dungeon : GameWindow{
 		using (var stream = File.OpenWrite(dep.path + "/screenshots/" + DateTime.Now.ToString("dd-MM-yyyy_HH-mm-ss") + ".png")){
 			writer.WritePng(rgbPixels, width, height, StbImageWriteSharp.ColorComponents.RedGreenBlue, stream);
 		}
-	}
-	
-	void setIcon(){
-		using Stream s = AssemblyFiles.getStream("res.icon.png");
-		
-		//Generate the image and put it as icon
-		ImageResult image = ImageResult.FromStream(s, StbImageSharp.ColorComponents.RedGreenBlueAlpha);
-		if(image == null || image.Data == null){
-			return;
-		}
-		
-		OpenTK.Windowing.Common.Input.Image i = new OpenTK.Windowing.Common.Input.Image(image.Width, image.Height, image.Data);
-		WindowIcon w = new WindowIcon(i);
-		
-		this.Icon = w;
 	}
 	
 	protected override void OnKeyDown(KeyboardKeyEventArgs e){
@@ -457,15 +511,12 @@ partial class Dungeon : GameWindow{
 		base.OnMouseDown(e);
     }
 	
-	#region WINDOWS
-		[DllImport("user32.dll", CharSet = CharSet.Unicode)]
-		private static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
-		
-		[DllImport("kernel32.dll")]
-		static extern bool AttachConsole(int dwProcessId);
-		const int ATTACH_PARENT_PROCESS = -1;
-		
-		[DllImport("kernel32.dll")]
-		static extern IntPtr GetConsoleWindow();
+	#region WINDOWS		
+	[DllImport("kernel32.dll")]
+	static extern bool AttachConsole(int dwProcessId);
+	const int ATTACH_PARENT_PROCESS = -1;
+	
+	[DllImport("kernel32.dll")]
+	static extern IntPtr GetConsoleWindow();
 	#endregion
 }
