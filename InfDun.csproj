@@ -7,7 +7,7 @@
 	<AllowUnsafeBlocks>true</AllowUnsafeBlocks> <!-- Needed because of OpenAL -->
     
 	<AssemblyName>InfDun</AssemblyName>
-    <Version>0.1.1</Version>
+    <Version>0.1.2</Version>
     <Authors>siljam</Authors>
     <Company>AshProject</Company>
 	
@@ -20,7 +20,6 @@
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
     <OutputType>Exe</OutputType>
 	
-	<DefineConstants>$(DefineConstants);DEBUG_GENERAL</DefineConstants>
 	<DefineConstants>$(DefineConstants);DEBUG_TIME</DefineConstants>
   </PropertyGroup>
   

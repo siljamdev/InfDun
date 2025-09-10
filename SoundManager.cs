@@ -110,7 +110,7 @@ class SoundManager : IDisposable{
 		AL.SourcePlay(source);
 	}
 	
-	int? getFreeSource() {
+	int? getFreeSource(){
 		for(int i = 0; i < sources.Count; i++){
 			ALSourceState state = (ALSourceState) AL.GetSource(sources[i], ALGetSourcei.SourceState);
 			if(state != ALSourceState.Playing && state != ALSourceState.Paused){
@@ -129,21 +129,23 @@ class SoundManager : IDisposable{
 		return s;
 	}
 	
+	#region errors
 	public void checkErrors(){
 		ALError error = AL.GetError();
 		while(error != ALError.NoError){
-			Console.Error.WriteLine("OpenAL Error: " + error);
+			Console.Error.WriteLine("[OpenAL Error] " + error);
 			
 			error = AL.GetError();
 		}
 		
 		AlcError error2 = ALC.GetError(device);
 		while(error2 != AlcError.NoError){
-			Console.Error.WriteLine("OpenAL Context Error: " + error);
+			Console.Error.WriteLine("[OpenAL Context Error] " + error);
 			
 			error2 = ALC.GetError(device);
 		}
 	}
+	#endregion
 	
 	public void Dispose(){
 		foreach(int s in sources){

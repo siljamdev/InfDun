@@ -24,7 +24,7 @@ class AABB{
 			//-0.5f, -0.5f,
 		};
 		
-		boxMesh = new Mesh("2", vertices, PrimitiveType.LineStrip);
+		boxMesh = new Mesh("2", vertices, PrimitiveType.LineStrip, "box");
 	}
 	
 	public static void setProjection(Matrix4 m){

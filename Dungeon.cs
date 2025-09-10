@@ -22,64 +22,15 @@ using Keys = OpenTK.Windowing.GraphicsLibraryFramework.Keys;
 
 partial class Dungeon : GameWindow{
 	
-	public const string version = "0.1.1";
+	public const string version = "0.1.2";
 	
-	KeyBind fullscreen = new KeyBind(Keys.F11, false);
-	KeyBind screenshot = new KeyBind(Keys.F2, false);
-	
-	KeyBind advancedMode = new KeyBind(Keys.LeftAlt, false);
-	
-	KeyBind moveUp = new KeyBind(Keys.W, true);
-	KeyBind moveDown = new KeyBind(Keys.S, true);
-	KeyBind moveLeft = new KeyBind(Keys.A, true);
-	KeyBind moveRight = new KeyBind(Keys.D, true);
-	
-	//These are static
-	KeyBind escape = new KeyBind(Keys.Escape, Keys.LeftShift, false);
-	KeyBind help = new KeyBind(Keys.F1, false);
-	KeyBind logUp = new KeyBind(Keys.Up, true);
-	KeyBind logDown = new KeyBind(Keys.Down, true);
-	KeyBind enter = new KeyBind(Keys.Enter, true);
-	
-	#if DEBUG_TIME
-		KeyBind debug = new KeyBind(Keys.M, false);
-	#endif
-	
-	public static List<(int, int?)> meshesMarkedForDisposal = new();
+	#region static
+	public static List<(int, int?, int?)> meshesMarkedForDisposal = new();
 	public static List<int> texturesMarkedForDisposal = new();
-	
-	public Dependencies dep;
-	public AshFile config;
-	
-	bool takeScreenshotNextTick;
-	
-	Renderer ren;
-	
-	public Scene sce;
-	
-	public SoundManager sm;
 	
 	public static DeltaHelper dh;
 	
-	public int highscore{
-		get{
-			return config.GetValue<int>("highscore");
-		}
-		set{
-			config.Set("highscore", value);
-			config.Save();
-			high.setText("Highscore: " + value);
-			highscor.setText("Highscore: " + value);
-		}
-	}
-	
-	#if DEBUG_GENERAL
-		DebugProc DebugMessageDelegate;
-	#endif
-	
-	bool isFullscreened;
-	
-	float maxFps = 144f;
+	static GLFWCallbacks.ErrorCallback GLFWErrorCallback;
 	
 	static void Main(string[] args){
 		if(OperatingSystem.IsWindows()){
@@ -88,7 +39,11 @@ partial class Dungeon : GameWindow{
 			}
 		}
 		
-		#if DEBUG_GENERAL
+		GLFWErrorCallback = OnGLFWError;
+		
+		GLFWProvider.SetErrorCallback(GLFWErrorCallback);
+		
+		#if DEBUG
 			using(Dungeon dun = new Dungeon(new NativeWindowSettings{
 				Title = "Dungeon Game - BETA",
 				Vsync = VSyncMode.On,
@@ -125,6 +80,65 @@ partial class Dungeon : GameWindow{
 		return w;
 	}
 	
+	#region errors
+	private static void OnGLFWError(OpenTK.Windowing.GraphicsLibraryFramework.ErrorCode error, string description){
+        Console.Error.WriteLine("[GLFW Error] " + error + ": " + description);
+    }
+	#endregion
+	#endregion
+	
+	KeyBind fullscreen = new KeyBind(Keys.F11, false);
+	KeyBind screenshot = new KeyBind(Keys.F2, false);
+	
+	KeyBind advancedMode = new KeyBind(Keys.LeftAlt, false);
+	
+	KeyBind moveUp = new KeyBind(Keys.W, true);
+	KeyBind moveDown = new KeyBind(Keys.S, true);
+	KeyBind moveLeft = new KeyBind(Keys.A, true);
+	KeyBind moveRight = new KeyBind(Keys.D, true);
+	
+	//These are static
+	KeyBind escape = new KeyBind(Keys.Escape, Keys.LeftShift, false);
+	KeyBind help = new KeyBind(Keys.F1, false);
+	KeyBind logUp = new KeyBind(Keys.Up, true);
+	KeyBind logDown = new KeyBind(Keys.Down, true);
+	KeyBind enter = new KeyBind(Keys.Enter, true);
+	
+	#if DEBUG_TIME
+		KeyBind debug = new KeyBind(Keys.M, false);
+	#endif
+	
+	public Dependencies dep;
+	public AshFile config;
+	
+	bool takeScreenshotNextTick;
+	
+	Renderer ren;
+	
+	public Scene sce;
+	
+	public SoundManager sm;
+	
+	public int highscore{
+		get{
+			return config.GetValue<int>("highscore");
+		}
+		set{
+			config.Set("highscore", value);
+			config.Save();
+			high.setText("Highscore: " + value);
+			highscor.setText("Highscore: " + value);
+		}
+	}
+	
+	bool isFullscreened;
+	
+	float maxFps = 144f;
+	
+	#if DEBUG
+		DebugProc DebugMessageDelegate;
+	#endif
+	
 	//new NativeWindowSettings{NumberOfSamples = 4}
 	Dungeon(NativeWindowSettings n) : base(GameWindowSettings.Default, n){
 		CenterWindow();
@@ -142,7 +156,7 @@ partial class Dungeon : GameWindow{
 		
 		initializeConfig();
 		
-		#if DEBUG_GENERAL
+		#if DEBUG
 			DebugMessageDelegate = OnDebugMessage;
 			
 			GL.DebugMessageCallback(DebugMessageDelegate, IntPtr.Zero);
@@ -340,12 +354,13 @@ partial class Dungeon : GameWindow{
 		}
 	}
 	
+	#region errors
 	public void checkErrors(){
 		OpenTK.Graphics.OpenGL.ErrorCode errorCode = GL.GetError();
         while(errorCode != OpenTK.Graphics.OpenGL.ErrorCode.NoError){
-            Console.Error.WriteLine("OpenGL Error: " + errorCode);
+            Console.Error.WriteLine("[OpenGL Error] " + errorCode);
 			if(ren != null){
-				ren.setCornerInfo("OpenGL Error: " + errorCode, Renderer.redTextColor);
+				ren.setCornerInfo("[OpenGL Error] " + errorCode, Renderer.redTextColor);
 			}
 			
             errorCode = GL.GetError();
@@ -353,7 +368,7 @@ partial class Dungeon : GameWindow{
 		sm.checkErrors();
 	}
 	
-	#if DEBUG_GENERAL
+	#if DEBUG
 		void OnDebugMessage(
 			DebugSource source,     // Source of the debugging message.
 			DebugType type,         // Type of the debugging message.
@@ -368,27 +383,24 @@ partial class Dungeon : GameWindow{
 			// also use the new function Marshal.PtrToStringUTF8 since .NET Core 1.1.
 			string message = Marshal.PtrToStringUTF8(pMessage, length);
 			
-			Console.Error.WriteLine("Error: Severity: " + severity + " Source: " + source + " Type: " + type + " Id: " + id + " Message: " + message);
+			Console.Error.WriteLine("[OpenGL Error] Severity: " + severity + " Source: " + source + " Type: " + type + " Id: " + id + " Message: " + message);
 			//Console.Error.WriteLine("[{0} source={1} type={2} id={3}] {4}", severity, source, type, id, message);
 			
 			if(ren != null){
-				ren.setCornerInfo("Error: " + source, Renderer.redTextColor);
+				ren.setCornerInfo("[OpenGL Error] " + source, Renderer.redTextColor);
 			}
 		}
 	#endif
+	#endregion
 	
 	void dispose(){
-		foreach((int VAO, int? VBO) in meshesMarkedForDisposal){		
-			GL.DeleteVertexArray(VAO);
-			
-			if(VBO != null){				
-				GL.DeleteBuffer((int) VBO);
-			}
+		foreach((int VAO, int? VBO, int? EBO) in meshesMarkedForDisposal){		
+			Mesh.cleanup(VAO, VBO, EBO);
 		}
 		meshesMarkedForDisposal.Clear();
 		
-		foreach(int t in texturesMarkedForDisposal){		
-			GL.DeleteTexture(t);
+		foreach(int tid in texturesMarkedForDisposal){		
+			Texture2D.cleanup(tid);
 		}
 		texturesMarkedForDisposal.Clear();
 	}

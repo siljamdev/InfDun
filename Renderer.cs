@@ -94,7 +94,7 @@ class Renderer{
 			0f, -1f,
 		};
 		
-		uiMesh = new Mesh("2", vertices, PrimitiveType.Triangles);
+		uiMesh = new Mesh("2", vertices, PrimitiveType.Triangles, "ui");
 		
 		float[] v2 = { //Just the full screen will be
 			-1f, -1f,
@@ -105,7 +105,7 @@ class Renderer{
 			-1f, 1f
 		};
 		
-		menuMesh = new Mesh("2", v2, PrimitiveType.Triangles);
+		menuMesh = new Mesh("2", v2, PrimitiveType.Triangles, "menu");
 		
 		book = new Dictionary<string, Texture2D>();
 		uiShader = Shader.fromAssembly("shaders.ui");

@@ -9,9 +9,10 @@ public class Mesh : IDisposable{
 	static int boundVAO;
 	
 	bool isDynamic;
-	bool usesIndex;
 	
 	public int? VBO {get; private set;}
+	public int? EBO {get; private set;}
+	
 	public int VAO {get; private set;}
 	
 	int floatsPerVertex; //per vertex, floats per vertex
@@ -20,9 +21,8 @@ public class Mesh : IDisposable{
 	PrimitiveType drawType;
 	
 	//Dynamic mesh
-	public Mesh(string components, int maxElements, PrimitiveType d){
+	public Mesh(string components, int maxElements, PrimitiveType d, string name = null){
 		isDynamic = true;
-		usesIndex = false;
 		
 		drawType = d;
 		
@@ -35,11 +35,31 @@ public class Mesh : IDisposable{
 		
 		//initialize vbo
 		VBO = GL.GenBuffer();
+		
+		#if DEBUG
+			GL.ObjectLabel(
+				ObjectLabelIdentifier.Buffer,
+				(int) VBO,
+				-1,
+				name + " <VBO>"
+			);
+		#endif
+		
 		GL.BindBuffer(BufferTarget.ArrayBuffer, (int) VBO);
 		GL.BufferData(BufferTarget.ArrayBuffer, maxElements * floatsPerVertex * sizeof(float), IntPtr.Zero, BufferUsageHint.DynamicDraw);
 		
 		//Vao
 		VAO = GL.GenVertexArray(); //Initialize VAO
+		
+		#if DEBUG
+			GL.ObjectLabel(
+				ObjectLabelIdentifier.VertexArray,
+				VAO,
+				-1,
+				name + " <VAO>"
+			);
+		#endif
+		
 		GL.BindVertexArray(VAO); //Bind VAO
 		
 		int sum = 0;
@@ -60,9 +80,8 @@ public class Mesh : IDisposable{
 	}
 	
 	//Static mesh
-	public Mesh(string components, float[] vertices, PrimitiveType d){
+	public Mesh(string components, float[] vertices, PrimitiveType d, string name = null){
 		isDynamic = false;
-		usesIndex = false;
 		
 		drawType = d;
 		
@@ -77,11 +96,31 @@ public class Mesh : IDisposable{
 		
 		//initialize vbo
 		VBO = GL.GenBuffer();
+		
+		#if DEBUG
+			GL.ObjectLabel(
+				ObjectLabelIdentifier.Buffer,
+				(int) VBO,
+				-1,
+				name + " <VBO>"
+			);
+		#endif
+		
 		GL.BindBuffer(BufferTarget.ArrayBuffer, (int) VBO);
 		GL.BufferData(BufferTarget.ArrayBuffer, vertices.Length * sizeof(float), vertices, BufferUsageHint.StaticDraw);
 		
 		//Vao
 		VAO = GL.GenVertexArray(); //Initialize VAO
+		
+		#if DEBUG
+			GL.ObjectLabel(
+				ObjectLabelIdentifier.VertexArray,
+				VAO,
+				-1,
+				name + " <VAO>"
+			);
+		#endif
+		
 		GL.BindVertexArray(VAO); //Bind VAO
 		
 		int sum = 0;
@@ -96,7 +135,9 @@ public class Mesh : IDisposable{
 		//unbind
 		GL.BindBuffer(BufferTarget.ArrayBuffer, 0); //Unbind VBO
 		GL.BindVertexArray(0); //Unbind VAO
-		GL.DeleteBuffer((int) VBO); //Delete VBO, we wont even need it anymore. If we delete before unbinding the VAO, it will unbind or something idk just dont do it
+		
+		//DONT DO THIS THIS MESSED EVERYTHING UP!!!!!!!
+		//GL.DeleteBuffer((int) VBO); //Delete VBO, we wont even need it anymore. If we delete before unbinding the VAO, it will unbind or something idk just dont do it
 		VBO = null;
 		
 		boundVBO = 0;
@@ -104,9 +145,8 @@ public class Mesh : IDisposable{
 	}
 	
 	//Static mesh with indices
-	public Mesh(string components, float[] vertices, uint[] indices, PrimitiveType d){
+	public Mesh(string components, float[] vertices, uint[] indices, PrimitiveType d, string name = null){
 		isDynamic = false;
-		usesIndex = true;
 		
 		drawType = d;
 		
@@ -121,16 +161,46 @@ public class Mesh : IDisposable{
 		
 		//initialize vbo
 		VBO = GL.GenBuffer();
+		
+		#if DEBUG
+			GL.ObjectLabel(
+				ObjectLabelIdentifier.Buffer,
+				(int) VBO,
+				-1,
+				name + " <VBO>"
+			);
+		#endif
+		
 		GL.BindBuffer(BufferTarget.ArrayBuffer, (int) VBO);
 		GL.BufferData(BufferTarget.ArrayBuffer, vertices.Length * sizeof(float), vertices, BufferUsageHint.StaticDraw);
 		
 		//initialize ebo
-		int EBO = GL.GenBuffer();
+		EBO = GL.GenBuffer();
+		
+		#if DEBUG
+			GL.ObjectLabel(
+				ObjectLabelIdentifier.Buffer,
+				(int) EBO,
+				-1,
+				name + " <EBO>"
+			);
+		#endif
+		
 		GL.BindBuffer(BufferTarget.ElementArrayBuffer, (int) EBO);
 		GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length * sizeof(uint), indices, BufferUsageHint.StaticDraw);
 		
 		//Vao
 		VAO = GL.GenVertexArray(); //Initialize VAO
+		
+		#if DEBUG
+			GL.ObjectLabel(
+				ObjectLabelIdentifier.VertexArray,
+				VAO,
+				-1,
+				name + " <VAO>"
+			);
+		#endif
+		
 		GL.BindVertexArray(VAO); //Bind VAO
 		
 		int sum = 0;
@@ -146,9 +216,13 @@ public class Mesh : IDisposable{
 		GL.BindBuffer(BufferTarget.ArrayBuffer, 0); //Unbind VBO
 		GL.BindBuffer(BufferTarget.ElementArrayBuffer, 0); //Unbind EBO
 		GL.BindVertexArray(0); //Unbind VAO
-		GL.DeleteBuffer((int) VBO); //Delete VBO, we wont even need it anymore. If we delete before unbinding the VAO, it will unbind or something idk just dont do it
+		
+		//DONT DO THIS THIS MESSED EVERYTHING UP!!!!!!!
+		//GL.DeleteBuffer((int) VBO); //Delete VBO, we wont even need it anymore. If we delete before unbinding the VAO, it will unbind or something idk just dont do it
 		VBO = null;
-		GL.DeleteBuffer(EBO); //Delete EBO, we wont need it anymore
+		
+		//DONT DO THIS THIS MESSED EVERYTHING UP!!!!!!!
+		//GL.DeleteBuffer(EBO); //Delete EBO, we wont need it anymore
 		
 		boundVBO = 0;
 		boundVAO = 0;
@@ -194,7 +268,7 @@ public class Mesh : IDisposable{
 	
 	public void draw(){
 		bind();
-		if(usesIndex){
+		if(EBO != null){
 			GL.DrawElements(drawType, numberOfVertices, DrawElementsType.UnsignedInt, 0);
 		}else{
 			GL.DrawArrays(drawType, 0, numberOfVertices);
@@ -203,15 +277,27 @@ public class Mesh : IDisposable{
 	
 	public void drawInstanced(int numberOfInstances){
 		bind();
-		if(usesIndex){
+		if(EBO != null){
 			GL.DrawElementsInstanced(drawType, numberOfVertices, DrawElementsType.UnsignedInt, IntPtr.Zero, numberOfInstances);
 		}else{
 			GL.DrawArraysInstanced(drawType, 0, numberOfVertices, numberOfInstances);
 		}
 	}
 	
+	public static void cleanup(int VAO, int? VBO, int? EBO){
+		GL.DeleteVertexArray(VAO);
+		
+		if(VBO != null){
+			GL.DeleteBuffer((int) VBO);
+		}
+		
+		if(EBO != null){
+			GL.DeleteBuffer((int) EBO);
+		}
+	}
+	
 	public void Dispose(){
-		Dungeon.meshesMarkedForDisposal.Add((VAO, VBO));
+		Dungeon.meshesMarkedForDisposal.Add((VAO, VBO, EBO));
 		if(boundVAO == VAO){
 			unbind();
 			boundVAO = 0;

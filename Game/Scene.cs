@@ -567,7 +567,7 @@ class Scene{
 			}
 		}
 		
-		return new Mesh("22", ver.ToArray(), PrimitiveType.Triangles);
+		return new Mesh("22", ver.ToArray(), PrimitiveType.Triangles, "tiles");
 	}
 	
 	//A bit messy, but it works

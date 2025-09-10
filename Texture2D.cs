@@ -19,7 +19,7 @@ public class Texture2D : IDisposable{
 	
 	public TextureUnit unit => unitFromInt(_unit);
 	
-	public Texture2D(ImageResult image, TextureParams tp, int u = 0){	
+	public Texture2D(ImageResult image, TextureParams tp, int u = 0, string name = null){	
 		this.internalFormat = PixelInternalFormat.Rgba8;
 		
 		this.width = image.Width; //Extract this needed values
@@ -28,6 +28,15 @@ public class Texture2D : IDisposable{
 		this._unit = u;
 		
 		this.id = GL.GenTexture(); //Generate the handle for the texture
+		
+		#if DEBUG
+			GL.ObjectLabel(
+				ObjectLabelIdentifier.Texture,
+				this.id,
+				-1,
+				name + " <texture>"
+			);
+		#endif
 		
 		GL.ActiveTexture(unit);
 		GL.BindTexture(TextureTarget.Texture2D, this.id); //bind it
@@ -55,37 +64,37 @@ public class Texture2D : IDisposable{
 	}
 	
 	//Disposes of the stream
-	public static Texture2D fromStream(Stream s, TextureParams tp, int unit = 0){
+	public static Texture2D fromStream(Stream s, TextureParams tp, int u = 0, string name = null){
 		ImageResult image = ImageResult.FromStream(s, ConvertFormat(tp.imageFormat));
 		if (image == null || image.Data == null){
-			throw new Exception("Image loading failed from stream");
+			throw new Exception("Image loading failed from stream (" + name + ")");
 		}
-		Texture2D t = new Texture2D(image, tp, unit);
+		Texture2D t = new Texture2D(image, tp, u, name);
 		return t;
 	}
 	
-	public static Texture2D fromFile(string path, TextureParams tp){
+	public static Texture2D fromFile(string path, TextureParams tp, int u = 0){
 		using FileStream fs = File.OpenRead(path);
 		try{
-			return fromStream(fs, tp);
+			return fromStream(fs, tp, u, path);
 		}catch(Exception e){
 			throw new Exception("Image loading failed from file: " + path, e);
 		}
 	}
 	
-	public static Texture2D fromBytes(byte[] data, TextureParams tp){
+	public static Texture2D fromBytes(byte[] data, TextureParams tp, int u = 0, string name = null){
 		ImageResult image = ImageResult.FromMemory(data, ConvertFormat(tp.imageFormat));
 		if (image == null || image.Data == null){
-			throw new Exception("Image loading failed from byte array");
+			throw new Exception("Image loading failed from byte array (" + name + ")");
 		}
-		Texture2D t = new Texture2D(image, tp);
+		Texture2D t = new Texture2D(image, tp, u, name);
 		return t;
 	}
 	
-	public static Texture2D fromAssembly(string name, TextureParams tp, int unit = 0){
+	public static Texture2D fromAssembly(string name, TextureParams tp, int u = 0){
 		using Stream s = AssemblyFiles.getStream(name);
 		try{
-			return fromStream(s, tp, unit);
+			return fromStream(s, tp, u, name);
 		}catch(Exception e){
 			throw new Exception("Image loading failed from assembly: " + name, e);
 		}
@@ -149,12 +158,17 @@ public class Texture2D : IDisposable{
 		}
 	}
 	
+	public static void cleanup(int tid){
+		GL.DeleteTexture(tid);
+	}
+	
 	public void Dispose(){
+		Dungeon.texturesMarkedForDisposal.Add(this.id);
+		
 		if(activeTexture[_unit] == this.id){
 			activeTexture[_unit] = 0;
 		}
 		
-		Dungeon.texturesMarkedForDisposal.Add(this.id);
 		GC.SuppressFinalize(this);
 	}
 	

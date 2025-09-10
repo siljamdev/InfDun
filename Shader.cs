@@ -13,8 +13,18 @@ public class Shader : IDisposable{
 	
 	Dictionary<string, int> uniforms;
 	
-	public Shader(string vertex, string fragment, string? geometry){
+	public Shader(string vertex, string fragment, string? geometry, string name = null){
 		int vertexShader = GL.CreateShader(ShaderType.VertexShader);
+		
+		#if DEBUG
+			GL.ObjectLabel(
+				ObjectLabelIdentifier.Shader,
+				vertexShader,
+				-1,
+				name + " <vert>"
+			);
+		#endif
+		
 		GL.ShaderSource(vertexShader, vertex);
 		GL.CompileShader(vertexShader);
 		
@@ -22,33 +32,63 @@ public class Shader : IDisposable{
 		GL.GetShader(vertexShader, ShaderParameter.CompileStatus, out compileStatus);
 		if(compileStatus == 0){
 			string log = GL.GetShaderInfoLog(vertexShader);
-			throw new Exception("GLSL VERTEX SHADER COMPILING ERROR:\n" + log);
+			throw new Exception("GLSL VERTEX SHADER (" + name + ".vert) COMPILING ERROR:\n" + log);
 		}
 		
 		int fragmentShader = GL.CreateShader(ShaderType.FragmentShader);
+		
+		#if DEBUG
+			GL.ObjectLabel(
+				ObjectLabelIdentifier.Shader,
+				fragmentShader,
+				-1,
+				name + " <frag>"
+			);
+		#endif
+		
 		GL.ShaderSource(fragmentShader, fragment);
 		GL.CompileShader(fragmentShader);
 		
 		GL.GetShader(fragmentShader, ShaderParameter.CompileStatus, out compileStatus);
 		if(compileStatus == 0){
 			string log = GL.GetShaderInfoLog(fragmentShader);
-			throw new Exception("GLSL FRAGMENT SHADER COMPILING ERROR:\n" + log);
+			throw new Exception("GLSL FRAGMENT SHADER (" + name + ".frag) COMPILING ERROR:\n" + log);
 		}
 		
 		int geometryShader = 0;
 		if(geometry != null){
 			geometryShader = GL.CreateShader(ShaderType.GeometryShader);
+			
+			#if DEBUG
+				GL.ObjectLabel(
+					ObjectLabelIdentifier.Shader,
+					geometryShader,
+					-1,
+					name + " <geom>"
+				);
+			#endif
+			
 			GL.ShaderSource(geometryShader, geometry);
 			GL.CompileShader(geometryShader);
 			
 			GL.GetShader(geometryShader, ShaderParameter.CompileStatus, out compileStatus);
 			if(compileStatus == 0){
 				string log = GL.GetShaderInfoLog(geometryShader);
-				throw new Exception("GLSL GEOMETRY SHADER COMPILING ERROR:\n" + log);
+				throw new Exception("GLSL GEOMETRY SHADER (" + name + ".geom) COMPILING ERROR:\n" + log);
 			}
 		}
 		
 		this.id = GL.CreateProgram();
+		
+		#if DEBUG
+			GL.ObjectLabel(
+				ObjectLabelIdentifier.Program,
+				this.id,
+				-1,
+				name + " <program>"
+			);
+		#endif
+		
 		GL.AttachShader(this.id, vertexShader);
 		GL.AttachShader(this.id, fragmentShader);
 		if(geometry != null){
@@ -61,7 +101,7 @@ public class Shader : IDisposable{
 		
 		if(linkStatus == (int)All.False){
 			string log = GL.GetProgramInfoLog(this.id);
-			throw new Exception("GLSL SHADER LINKING ERROR:\n" + log);
+			throw new Exception("GLSL SHADER (" + name + ") LINKING ERROR:\n" + log);
 		}
 		
 		GL.ValidateProgram(this.id);
@@ -71,7 +111,7 @@ public class Shader : IDisposable{
 		
 		if(validateStatus == (int)All.False){
 			string log = GL.GetProgramInfoLog(this.id);
-			throw new Exception("GLSL SHADER VALIDATING ERROR:\n" + log);
+			throw new Exception("GLSL SHADER (" + name + ") VALIDATING ERROR:\n" + log);
 		}
 		
 		GL.DetachShader(this.id, vertexShader);
@@ -93,21 +133,21 @@ public class Shader : IDisposable{
 		uniforms = new Dictionary<string, int>(count);
 		
 		for(int i = 0; i < count; i++){
-			GL.GetActiveUniform(this.id, i, 256, out _, out _, out _, out string name);
-			int location = GL.GetUniformLocation(this.id, name);
-			uniforms[name] = location;
+			GL.GetActiveUniform(this.id, i, 256, out _, out _, out _, out string uname);
+			int location = GL.GetUniformLocation(this.id, uname);
+			uniforms[uname] = location;
 		}
 	}
 	
 	public static Shader fromAssembly(string name){
-		string v = AssemblyFiles.getText(name + "Vertex.glsl");
-		string f = AssemblyFiles.getText(name + "Fragment.glsl");
+		string v = AssemblyFiles.getText(name + ".vert");
+		string f = AssemblyFiles.getText(name + ".frag");
 		string g = null;
-		if(AssemblyFiles.exists(name + "Geometry.glsl")){
-			g = AssemblyFiles.getText(name + "Geometry.glsl");
+		if(AssemblyFiles.exists(name + ".geom")){
+			g = AssemblyFiles.getText(name + ".geom");
 		}
 		
-		return new Shader(v, f, g);
+		return new Shader(v, f, g, name);
 	}
 	
 	public void use(){

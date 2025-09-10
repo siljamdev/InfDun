@@ -30,7 +30,7 @@ class LineStrip{
 	public LineStrip(params Vector2d[] pts){
 		float[] vertices = pts.SelectMany(n => new[]{(float) n.X, (float) n.Y}).ToArray();
 		
-		lineMesh = new Mesh("2", vertices, PrimitiveType.LineStrip);
+		lineMesh = new Mesh("2", vertices, PrimitiveType.LineStrip, "linestrip");
 	}
 	
 	public override string ToString(){

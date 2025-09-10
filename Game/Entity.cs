@@ -28,7 +28,7 @@ abstract class Entity{
 			-0.5f, 0.0f,
 		};
 		
-		entityMesh = new Mesh("2", vertices, PrimitiveType.Triangles);
+		entityMesh = new Mesh("2", vertices, PrimitiveType.Triangles, "entity");
 		
 		entityTexture = Texture2D.fromAssembly("res.textures.entities.png", TextureParams.Default);
 		
