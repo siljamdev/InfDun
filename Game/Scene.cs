@@ -404,7 +404,7 @@ class Scene{
 					e.endSmooth(this);
 				}
 				
-				if(tileAt(p.position) == 17){
+				if(!p.isDying && tileAt(p.position) == 17){
 					p.score += 100;
 					doingDescent = true;
 					descentTime = 0d;

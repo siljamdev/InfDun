@@ -22,7 +22,7 @@ using Keys = OpenTK.Windowing.GraphicsLibraryFramework.Keys;
 
 partial class Dungeon : GameWindow{
 	
-	public const string version = "0.1.2";
+	public const string version = "0.1.3";
 	
 	#region static
 	public static List<(int, int?, int?)> meshesMarkedForDisposal = new();
@@ -224,6 +224,7 @@ partial class Dungeon : GameWindow{
 		
 		setVsync(config.GetValue<bool>("vsync"));
 		maxFps = config.GetValue<float>("maxFps");
+		this.UpdateFrequency = maxFps;
 		
 		int[] ka = config.GetValue<int[]>("controls");
 		if(ka.Length > 6){
@@ -487,9 +488,9 @@ partial class Dungeon : GameWindow{
 		}
 		base.OnRenderFrame(args);
 		dh.Frame();
-		if(VSync != VSyncMode.On){
+		/* if(VSync != VSyncMode.On){
 			dh.Target(maxFps);
-		}
+		} */
 	}
 	
 	protected override void OnMouseWheel(MouseWheelEventArgs args){

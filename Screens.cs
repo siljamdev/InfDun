@@ -44,16 +44,26 @@ partial class Dungeon{
 			new UiText(Placement.TopCenter, 0f, 3f * Renderer.textSize.Y, "Dungeon Game, created by siljamdev", Renderer.selectedTextColor),
 			new UiText(Placement.TopCenter, 0f, 4f * Renderer.textSize.Y, "Version v" + version, Renderer.selectedTextColor),
 			new UiText(Placement.TopCenter, 0f, 6f * Renderer.textSize.Y, "Based on Generic game template by siljamdev", Renderer.selectedTextColor),
-			new UiButton(Placement.BottomCenter, 0f, 3f * Renderer.separation, 300f, "GitHub", Renderer.buttonColor).setAction(() => openUrl("https://github.com/siljamdev/qwqf2efe")),
+			new UiButton(Placement.BottomCenter, 0f, 3f * Renderer.separation, 300f, "GitHub", Renderer.buttonColor).setAction(() => openUrl("https://github.com/siljamdev/InfDun")),
 			new UiButton(Placement.BottomCenter, 0f, 1f * Renderer.separation, 300f, "Close", Renderer.redButtonColor).setAction(ren.closeScreen)
-		);
+		).setScrollingLog(new UiLog(20f, 20f, 8f * Renderer.textSize.Y, Renderer.textColor,
+					"NO GENERATIVE AI WAS USED IN THE CREATION OF THE ASSETS OF THIS GAME",
+					"AI was only used to write small, unimportant and repetitive parts of the game's code, and was always reviewed and tweaked by me (a human) afterwards",
+					"All textures were created by hand using the amazing paint.net",
+					"All sounds were either recorded by me or downloaded from freesound.org"
+		));
 		
 		helpMenu = new UiScreen(
 			new UiText(Placement.TopCenter, 0f, 20f, "Help", Renderer.titleTextColor),
 			new UiButton(Placement.BottomCenter, 0f, 1f * Renderer.separation, 300f, "Close", Renderer.redButtonColor).setAction(ren.closeScreen)
-		).setScrollingLog(new UiLog(20f, 20f, 6f * Renderer.textSize.Y, Renderer.textColor,
+		).setScrollingLog(new UiLog(20f, 20f, 3f * Renderer.textSize.Y, Renderer.textColor,
 					"This game is a turn based dungeon crawler",
-					"You control the player, and your objective is getting the most points before dying"
+					"You control the player, and your objective is getting the most points before dying",
+					"The game works on turns, each turn you can do one action(either moving, or attacking), and then, other creatures will do their turn",
+					"You start on level 0, and can go to the next by finding the stairs that go down. Levels get progressively harder",
+					"You start with 10 lives and you can increase the maximum with magical orbs or with altars",
+					"You get points by collecting coins, killing creatures and passing to the next level",
+					"Try to get the best highscore and challenge your friends"
 		));
 		
 		vsync = new UiCheck(Placement.Center, 0f, -2f * Renderer.separation, Renderer.textSize.Y + 10f, Renderer.textSize.Y + 10f, "Vsync:", config.GetValue<bool>("vsync"), Renderer.buttonColor);
@@ -85,6 +95,7 @@ partial class Dungeon{
 				
 				setVsync(config.GetValue<bool>("vsync"));
 				maxFps = config.GetValue<float>("maxFps");
+				this.UpdateFrequency = maxFps;
 				sm.isActive = config.GetValue<bool>("sound");
 				ParticleRenderer.isActive = config.GetValue<bool>("particles");
 			}),

@@ -65,6 +65,7 @@ class UiField : UiSelectable{
 			return false;
 		}
 		text += s;
+		this.needGen = true;
 		return true;
 	}
 	
@@ -73,6 +74,7 @@ class UiField : UiSelectable{
 			return false;
 		}
 		text = text.Substring(0, text.Length - 1);
+		this.needGen = true;
 		return true;
 	}
 	
