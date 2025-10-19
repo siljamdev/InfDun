@@ -35,7 +35,7 @@ class Scene{
 	//in-between turn smoothing
 	public double smoothTime{get; private set;}
 	public double smoothTimeMax{get; private set;}
-	bool doingSmoothing;
+	public bool doingSmoothing{get; private set;}
 	
 	//Exit descent
 	public double descentTime{get; private set;}
@@ -63,9 +63,6 @@ class Scene{
 	public bool[] globalTransitable{get; private set;}
 	
 	Mesh tilesMesh;
-	
-	readonly static int[] intransitableTiles = new int[]{0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}; //because most tiles are transitable
-	readonly static int[] tilesWithRandomRotation = new int[]{1, 2, 20};
 	
 	public bool canMovePlayer => (!doingSmoothing) && (!doingDescent);
 	
@@ -143,9 +140,9 @@ class Scene{
 		smoothTimeMax = 0.3d;
 		
 		//Generate
-		LevelGenerator gen = new LevelGenerator(rand);
+		LevelGenerator gen = new LevelGenerator(levelNum, rand);
 		
-		(bool[,] m, entities, Vector2i exitPos) = gen.generate(levelNum);
+		(int[,] m, entities, Vector2i startPos) = gen.generate();
 		
 		mapYsize = m.GetLength(0);
 		mapXsize = m.GetLength(1);
@@ -154,18 +151,18 @@ class Scene{
 		Necromancer.minionLimit = (levelNum - 2) / 4;
 		
 		//Entities
-		(entities, Vector2i y) = sortEntities(entities);
+		entities = sortEntities(entities);
 		
 		//Player
 		entities.Add(p);
-		p.newLevel(this, y);
+		p.newLevel(this, startPos);
 		
 		//Set camera
 		cam.moveFast(p.position);
 		
 		//Tiles
-		tiles = generateTiles(m, y, exitPos, levelNum, rand).Cast<int>().ToArray();
-		transitable = tiles.Select(n => !intransitableTiles.Contains(n)).ToArray();
+		tiles = m.Cast<int>().ToArray();
+		transitable = tiles.Select(n => Tile.transitables.Contains(n)).ToArray();
 		
 		//Tile mesh
 		tilesMesh = createTilesMesh(tiles, mapXsize, mapYsize, rand);
@@ -491,15 +488,12 @@ class Scene{
 		tileShader.setMatrix4("view", cam.view);
 	}
 	
-	static (List<Entity>, Vector2i) sortEntities(List<Entity> l){
+	static List<Entity> sortEntities(List<Entity> l){
 		List<Entity> living = new();
 		List<Entity> items = new();
-		Vector2i p = Vector2i.Zero;
 		
 		foreach(Entity e in l){
-			if(e is Player y){
-				p = y.position;
-			}else if(e is Living){
+			if(e is Living){
 				living.Add(e);
 			}else{
 				items.Add(e);
@@ -507,7 +501,7 @@ class Scene{
 		}
 		
 		items.AddRange(living);
-		return (items, p);
+		return items;
 	}
 	
 	static Mesh createTilesMesh(int[] tiles, int x, int y, Random rand){
@@ -545,7 +539,7 @@ class Scene{
 				}
 				
 				//Handle random rotations, these are indices for r
-				int[] texCorners = tilesWithRandomRotation.Contains(m) ? rand.Next(4) switch{
+				int[] texCorners = Tile.withRandomRotation.Contains(m) ? rand.Next(4) switch{
 					0 => new int[]{0, 1, 2, 0, 2, 3},
 					1 => new int[]{1, 2, 3, 1, 3, 0},
 					2 => new int[]{2, 3, 0, 2, 0, 1},
@@ -568,115 +562,6 @@ class Scene{
 		}
 		
 		return new Mesh("22", ver.ToArray(), PrimitiveType.Triangles, "tiles");
-	}
-	
-	//A bit messy, but it works
-	static int[,] generateTiles(bool[,] m, Vector2i startPos, Vector2i exitPos, int levelNum, Random rand){
-		int[,] w = new int[m.GetLength(0), m.GetLength(1)];
-		
-		//Helper func
-		bool get(int x, int y){
-			if(x >= 0 && x < m.GetLength(1) && y >= 0 && y < m.GetLength(0)){
-				return m[y, x];
-			}
-			return false;
-		}
-		
-		int getFloorTile(){
-			if(rand.Next(8) == 0){
-				if(levelNum > 5 && rand.Next(100) == 0){
-					return 19; //Skull
-				}else if(rand.Next(4) == 0){
-					return 20; //Fungi
-				}else{
-					return 2; //Puddle
-				}
-			}else{
-				return 1;
-			}
-		}
-		
-		for(int i = 0; i < m.GetLength(1); i++){
-			for(int j = 0; j < m.GetLength(0); j++){
-				if(get(i, j)){
-					if(new Vector2i(i, j) == exitPos){
-						w[j, i] = 17;
-					}else if(new Vector2i(i, j) == startPos){
-						w[j, i] = 18;
-					}else{
-						w[j, i] = getFloorTile();
-					}
-				}else if(get(i, j-1)){
-					w[j, i] = rand.Next(24) == 0 ? 16 : 3;
-				}else if(get(i+1, j-1) && get(i-1, j-1)){
-					if(get(i, j+1)){
-						w[j, i] = 11;
-					}else{
-						w[j, i] = 12;
-					}
-				}else if(get(i+1, j-1)){
-					if(get(i, j+1)){
-						if(get(i-1, j)){
-							w[j, i] = 11;
-						}else{
-							w[j, i] = 9;
-						}
-					}else if(get(i-1, j)){
-						w[j, i] = 12;
-					}else if(get(i-1, j+1)){
-						w[j, i] = 14;
-					}else{
-						w[j, i] = 5;
-					}
-				}else if(get(i-1, j-1)){
-					if(get(i, j+1)){
-						if(get(i+1, j)){
-							w[j, i] = 11;
-						}else{
-							w[j, i] = 10;
-						}
-					}else if(get(i+1, j)){
-						w[j, i] = 12;
-					}else if(get(i+1, j+1)){
-						w[j, i] = 15;
-					}else{
-						w[j, i] = 6;
-					}
-				}else if(get(i, j+1)){
-					if(get(i+1, j) && get(i-1, j)){
-						w[j, i] = 11;
-					}else if(get(i+1, j)){
-						w[j, i] = 9;
-					}else if(get(i-1, j)){
-						w[j, i] = 10;
-					}else{
-						w[j, i] = 4;
-					}
-				}else if(get(i+1, j) && get(i-1, j)){
-					w[j, i] = 12;
-				}else if(get(i+1, j)){
-					if(get(i-1, j+1)){
-						w[j, i] = 14;
-					}else{
-						w[j, i] = 5;
-					}
-				}else if(get(i-1, j)){
-					if(get(i+1, j+1)){
-						w[j, i] = 15;
-					}else{
-						w[j, i] = 6;
-					}
-				}else if(get(i+1, j+1) && get(i-1, j+1)){
-					w[j, i] = 13;
-				}else if(get(i+1, j+1)){
-					w[j, i] = 7;
-				}else if(get(i-1, j+1)){
-					w[j, i] = 8;
-				}
-			}
-		}
-		
-		return w;
 	}
 	
 	public void endLife(){

@@ -25,7 +25,7 @@ class DripGenerator : Entity{
 			time = 0d;
 			gen = false;
 			
-			sce.sm.play(dripSound.get(sce.rand), new Vector3(position.X, position.Y, 0f), 1f, 0.8f + (float)sce.rand.NextDouble() * 0.4f);
+			sce.sm.play(dripSound.get(sce.rand), new Vector3(position.X, position.Y, 0f), 1f, 0.8f + (float)sce.rand.NextDouble() * 0.4f, 3f);
 			
 			int c = sce.rand.Next(8) + 4;
 			for(int i = 0; i < c; i++){

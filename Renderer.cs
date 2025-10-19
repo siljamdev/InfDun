@@ -49,6 +49,8 @@ class Renderer{
 	Texture2D back;
 	Texture2D back2;
 	
+	Texture2D clock;
+	
 	public Dungeon dun;
 	
 	Stopwatch sw;
@@ -130,6 +132,8 @@ class Renderer{
 		
 		back = Texture2D.fromAssembly("res.textures.back.png", TextureParams.Default);
 		back2 = Texture2D.fromAssembly("res.textures.back2.png", TextureParams.Default, 1);
+		
+		clock = Texture2D.fromAssembly("res.textures.clock.png", TextureParams.Default);
 		
 		overlayScreen = new UiScreen(
 			new UiImage(Placement.TopLeft, 0f, 0f, 40, 40, "heart", new Color3("AA0000"))
@@ -252,6 +256,19 @@ class Renderer{
 		drawTexture(n, new Vector2(xpos, ypos), new Vector2(sca, sca), col, alpha);
 	}
 	
+	public void drawClock(){
+		Matrix4 rot = Matrix4.CreateRotationZ(MathHelper.DegreesToRadians((float) (360d * dun.sce.smoothTime / dun.sce.smoothTimeMax)));
+		Matrix4 model = Matrix4.CreateScale(new Vector3(30f, 30f, 0f)) * Matrix4.CreateTranslation(new Vector3(-15f, 15f, 0f)) * rot * Matrix4.CreateTranslation(new Vector3(15f, -15f, 0f)) * Matrix4.CreateTranslation(new Vector3(-width/2f, -height/2f + 30f, 0f));
+		
+		uiShader.use();
+		uiShader.setMatrix4("model", model);
+		uiShader.setVector4("col", Color3.White, 0.6f);
+		
+		clock.bind();
+		
+		uiMesh.draw();
+	}
+	
 	public void draw(){
 		GL.ClearColor(backgroundColor);
 		GL.Clear(ClearBufferMask.ColorBufferBit);
@@ -260,7 +277,7 @@ class Renderer{
 		
 		cam.startFrame();
 		
-		//Render scene
+		//Render scene or bg
 		if(dun.sce != null){
 			dun.sce.draw(this);
 		}else{
@@ -298,6 +315,10 @@ class Renderer{
 		}
 		
 		if(dun.sce != null){
+			if(dun.sce.doingSmoothing){
+				drawClock();
+			}
+			
 			if(currentScreen != null){
 				overlayScreen.draw(this, false);
 				

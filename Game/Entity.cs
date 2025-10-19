@@ -148,5 +148,5 @@ abstract class Entity{
 }
 
 enum EntityState : byte{
-	idle = 0, moving = 1, action = 2
+	idle = 0, moving = 1, action = 2, attacking = 3
 }

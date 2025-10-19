@@ -44,7 +44,7 @@ class SoundManager : IDisposable{
 		AL.Listener(ALListener3f.Position, ref p);
 	}
 	
-	public void play(Sound sound, Vector3 pos, float gain = 1.0f, float pitch = 1.0f){
+	public void play(Sound sound, Vector3 pos, float gain = 1.0f, float pitch = 1.0f, float rollof = 1.5f){
 		if(pos != Vector3.Zero && !sound.isMono){
 			Console.Error.WriteLine("Only Mono sounds support directional audio");
 		}
@@ -70,7 +70,7 @@ class SoundManager : IDisposable{
 		AL.Source(source, ALSourcef.MaxGain, 1f);
 		
 		AL.Source(source, ALSourceb.SourceRelative, false);
-		AL.Source(source, ALSourcef.RolloffFactor, 1.5f);
+		AL.Source(source, ALSourcef.RolloffFactor, rollof);
 		AL.Source(source, ALSourcef.ReferenceDistance, 2f);
 		AL.Source(source, ALSourcef.MaxDistance, 32f);
 		
@@ -79,8 +79,8 @@ class SoundManager : IDisposable{
 		AL.SourcePlay(source);
 	}
 	
-	public void play(Sound sound, float gain = 1.0f, float pitch = 1.0f){
-		play(sound, Vector3.Zero, gain, pitch);
+	public void play(Sound sound, float gain = 1.0f, float pitch = 1.0f, float rollof = 1.5f){
+		play(sound, Vector3.Zero, gain, pitch, rollof);
 	}
 	
 	//Always max vol

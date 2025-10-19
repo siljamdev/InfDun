@@ -15,7 +15,10 @@ class LevelGenerator{
 	
 	int levelNum;
 	
-	public LevelGenerator(Random r){
+	bool wetFloor;
+	
+	public LevelGenerator(int l, Random r){
+		levelNum = l;
 		rand = r;
 		
 		roomPopulator = new WeightedRandom();
@@ -30,9 +33,7 @@ class LevelGenerator{
 		roomPopulator.Add(2); //8, Necromancer
 	}
 	
-	public (bool[,], List<Entity>, Vector2i) generate(int num){
-		levelNum = num;
-		
+	public (int[,], List<Entity>, Vector2i) generate(){
 		(int width, int height) = generateSize();
 		
 		tiles = new bool[height, width];
@@ -97,21 +98,23 @@ class LevelGenerator{
 		Room player = rooms[rand.Next(rooms.Count)];
 		rooms.Remove(player);
 		
-		Vector2i pos = getAvailablePos(player);
-		
-		entities.Add(new Player(pos));
+		Vector2i startPos = getAvailablePos(player);
 		
 		//Place exit
 		Room exit = selectRandomRoomFar(player);
 		rooms.Remove(exit);
 		
-		Vector2i pos2 = exit.center;
+		Vector2i exitPos = exit.center;
 		
+		//Determine wet
+		wetFloor = levelNum > 1 && rand.Next(3) != 0;
+		
+		//Populate
 		foreach(Room r in rooms){
 			populateRoom(r);
 		}
 		
-		return (tiles, entities, pos2);
+		return (generateTiles(tiles, startPos, exitPos), entities, startPos);
 	}
 	
 	(int, int) generateSize(){
@@ -200,7 +203,7 @@ class LevelGenerator{
 			break;
 		}
 		
-		if(rand.Next(2) == 0){
+		if(wetFloor && rand.Next(2) == 0){
 			entities.Add(new DripGenerator(getAvailablePos(r)));
 		}
 	}
@@ -351,7 +354,115 @@ class LevelGenerator{
 		}
 		
 		return weightedRooms[weightedRooms.Count - 1].room; // fallback
-	}	
+	}
+	
+	//A bit messy, but it works
+	int[,] generateTiles(bool[,] m, Vector2i startPos, Vector2i exitPos){
+		int[,] w = new int[m.GetLength(0), m.GetLength(1)];
+		
+		//Helper func
+		bool get(int x, int y){
+			if(x >= 0 && x < m.GetLength(1) && y >= 0 && y < m.GetLength(0)){
+				return m[y, x];
+			}
+			return false;
+		}
+		
+		int getFloorTile(){
+			if(rand.Next(8) == 0){
+				if(levelNum > 5 && rand.Next(100) == 0){
+					return Tile.Skull;
+				}else if(rand.Next(4) == 0){
+					return Tile.Fungi;
+				}else if(wetFloor){
+					return rand.Next(3) == 0 ? Tile.SmallPuddle : Tile.Puddle;
+				}
+			}
+			return Tile.Floor;
+		}
+		
+		for(int i = 0; i < m.GetLength(1); i++){
+			for(int j = 0; j < m.GetLength(0); j++){
+				if(get(i, j)){
+					if(new Vector2i(i, j) == exitPos){
+						w[j, i] = Tile.Exit;
+					}else if(new Vector2i(i, j) == startPos){
+						w[j, i] = Tile.Start;
+					}else{
+						w[j, i] = getFloorTile();
+					}
+				}else if(get(i, j-1)){
+					w[j, i] = rand.Next(24) == 0 ? 16 : 3;
+				}else if(get(i+1, j-1) && get(i-1, j-1)){
+					if(get(i, j+1)){
+						w[j, i] = 11;
+					}else{
+						w[j, i] = 12;
+					}
+				}else if(get(i+1, j-1)){
+					if(get(i, j+1)){
+						if(get(i-1, j)){
+							w[j, i] = 11;
+						}else{
+							w[j, i] = 9;
+						}
+					}else if(get(i-1, j)){
+						w[j, i] = 12;
+					}else if(get(i-1, j+1)){
+						w[j, i] = 14;
+					}else{
+						w[j, i] = 5;
+					}
+				}else if(get(i-1, j-1)){
+					if(get(i, j+1)){
+						if(get(i+1, j)){
+							w[j, i] = 11;
+						}else{
+							w[j, i] = 10;
+						}
+					}else if(get(i+1, j)){
+						w[j, i] = 12;
+					}else if(get(i+1, j+1)){
+						w[j, i] = 15;
+					}else{
+						w[j, i] = 6;
+					}
+				}else if(get(i, j+1)){
+					if(get(i+1, j) && get(i-1, j)){
+						w[j, i] = 11;
+					}else if(get(i+1, j)){
+						w[j, i] = 9;
+					}else if(get(i-1, j)){
+						w[j, i] = 10;
+					}else{
+						w[j, i] = 4;
+					}
+				}else if(get(i+1, j) && get(i-1, j)){
+					w[j, i] = 12;
+				}else if(get(i+1, j)){
+					if(get(i-1, j+1)){
+						w[j, i] = 14;
+					}else{
+						w[j, i] = 5;
+					}
+				}else if(get(i-1, j)){
+					if(get(i+1, j+1)){
+						w[j, i] = 15;
+					}else{
+						w[j, i] = 6;
+					}
+				}else if(get(i+1, j+1) && get(i-1, j+1)){
+					w[j, i] = 13;
+				}else if(get(i+1, j+1)){
+					w[j, i] = 7;
+				}else if(get(i-1, j+1)){
+					w[j, i] = 8;
+				}
+			}
+		}
+		
+		return w;
+	}
 }
 
 class Room{
@@ -381,46 +492,5 @@ class Room{
 	
 	public float distanceSquared(Room r){
 		return Vector2.DistanceSquared(center, r.center);
-	}
-}
-
-class WeightedRandom{
-	public int Count {get; private set;}
-	public List<int> Weight {get; private set;} = new();
-	public List<bool> Enabled {get; private set;} = new();
-	
-	int max;
-	List<(int, int, int)> ranges = new(); //Rmin, rmax, value
-	
-	public void Add(int w){
-		Count++;
-		Weight.Add(w);
-		Enabled.Add(true);
-	}
-	
-	public void build(){
-		ranges.Clear();
-		max = 0;
-		
-		for(int i = 0; i < Count; i++){
-			if(Enabled[i]){
-				int n = max;
-				
-				max += Weight[i];
-				
-				ranges.Add((n, max - 1, i));
-			}
-		}
-	}
-	
-	public int get(Random rand){
-		int g = rand.Next(max);
-		foreach((int n, int x, int v) in ranges){
-			if(g >= n && g <= x){
-				return v;
-			}
-		}
-		
-		return -1;
 	}
 }

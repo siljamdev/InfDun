@@ -97,9 +97,10 @@ abstract class Living : Entity{
 	
 	protected bool attack(int d, Living s, Scene sce){
 		if(s != null && s.tryDamageBy(d, this, sce)){
+			state = EntityState.attacking;
 			if(s.position.X > position.X){
 				facingLeft = false;
-			}else if(s.position.X > position.X){
+			}else if(s.position.X < position.X){
 				facingLeft = true;
 			}
 			
@@ -140,11 +141,15 @@ abstract class Living : Entity{
 			isHurt = false;
 		}
 		
+		if(state == EntityState.attacking){
+			state = EntityState.idle;
+		}
+		
 		base.endSmooth(sce);
 	}
 	
 	public override bool onClick(Scene sce){
-		return tryDamageBy(1, sce.p, sce);
+		return sce.p.attack(1, this, sce);
 	}
 	
 	public override Vector2 getPos(Scene sce){
@@ -161,6 +166,25 @@ abstract class Living : Entity{
 		}
 		
 		return pos;
+	}
+	
+	protected override Matrix4 getModel(Scene sce){
+		Vector2 pos = getPos(sce);
+		
+		Matrix4 r = Matrix4.CreateTranslation(new Vector3(pos.X, pos.Y, 0f));
+		
+		if(facingLeft){
+			r = leftRotation * r;
+		}
+		
+		if(state == EntityState.attacking){
+			float x = (float) (sce.smoothTime * (1d/sce.smoothTimeMax));
+			float y = -x*x + x;
+			y *= -20f;
+			r = Matrix4.CreateRotationZ(MathHelper.DegreesToRadians(y)) * r;
+		}
+		
+		return r;
 	}
 	
 	public override float getAlpha() => (dyingAnimation != null && dyingAnimation.frame > 4 && dyingAnimation.frame < 6) ? (float) (1d - dyingAnimation.time/dyingAnimation.maxTime) : 1f;

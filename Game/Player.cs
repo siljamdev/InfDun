@@ -79,6 +79,10 @@ class Player : Living{
 		friends.RemoveAll(n => n.isDying);
 	}
 	
+	protected override void onMove(Scene sce){
+		sce.sm.playAbs(stepSound.get(sce.rand), 0.5f, 0.8f + (float)sce.rand.NextDouble() * 0.4f);
+	}
+	
 	protected override void onHurt(Scene sce, Living s){
 		sce.sm.playAbs(hurtSound, 1f, 0.6f + (float)sce.rand.NextDouble() * 0.7f);
 		
@@ -88,7 +92,7 @@ class Player : Living{
 	}
 	
 	protected override void onDeath(Scene sce, Living s){
-		sce.sm.playAbs(loseSound);
+		sce.sm.playAbs(loseSound, 0.7f);
 		
 		if(s is Necromancer n){
 			n.addSkeleton(sce, position, facingLeft);
