@@ -8,11 +8,6 @@ using OpenTK.Mathematics;
 using AshLib;
 
 class Renderer{
-	
-	public int width{get; private set;}
-	public int height{get; private set;}
-	
-	Color4 backgroundColor = new Color4(0, 0, 0, 1);
 	public static readonly Vector2 textSize = new Vector2(15f, 18f);
 	public static readonly Vector2 middleTextSize = new Vector2(22f, 28f);
 	public static readonly Vector2 bigTextSize = new Vector2(28f, 35f);
@@ -33,11 +28,16 @@ class Renderer{
 	
 	public static readonly Color3 black = Color3.Black;
 	
+	public int width{get; private set;}
+	public int height{get; private set;}
+	
+	Color4 backgroundColor = new Color4(0, 0, 0, 1);
+	
 	public Camera cam{get; private set;}
 	public FontRenderer fr{get; private set;}
 	public ParticleRenderer uipr{get; private set;} //UI particle renderer
 	
-	Dictionary<string, Texture2D> book;
+	Dictionary<string, Texture2D> uiTexturesBook;
 
 	public Mesh uiMesh{get; private set;}
 	Mesh menuMesh;
@@ -50,6 +50,8 @@ class Renderer{
 	Texture2D back2;
 	
 	Texture2D clock;
+	Matrix4 clockLeft = Matrix4.CreateScale(new Vector3(45f, 45f, 0f)) * Matrix4.CreateTranslation(new Vector3(-22.5f, 22.5f, 0f));
+	Matrix4 clockRight;
 	
 	public Dungeon dun;
 	
@@ -74,6 +76,8 @@ class Renderer{
 		
 		width = 640;
 		height = 480;
+		
+		clockRight = Matrix4.CreateTranslation(new Vector3(22.5f, -22.5f, 0f)) * Matrix4.CreateTranslation(new Vector3(-width/2f, -height/2f + 45f, 0f));
 		
 		screens = new Stack<UiScreen>();
 		
@@ -109,7 +113,7 @@ class Renderer{
 		
 		menuMesh = new Mesh("2", v2, PrimitiveType.Triangles, "menu");
 		
-		book = new Dictionary<string, Texture2D>();
+		uiTexturesBook = new Dictionary<string, Texture2D>();
 		uiShader = Shader.fromAssembly("shaders.ui");
 		rectShader = Shader.fromAssembly("shaders.rect");
 		menuShader = Shader.fromAssembly("shaders.menu");
@@ -174,12 +178,16 @@ class Renderer{
 		corner = s;
 		cornerColor = c;
 		sw.Restart();
+		
+		Console.WriteLine(s);
 	}
 	
 	public void setCornerInfo(string s){
 		corner = s;
 		cornerColor = textColor;
 		sw.Restart();
+		
+		Console.WriteLine(s);
 	}
 	
 	public void updateSize(int w, int h){
@@ -201,10 +209,12 @@ class Renderer{
 		overlayScreen.updateProj(this);
 		
 		currentScreen?.updateProj(this);
+		
+		clockRight = Matrix4.CreateTranslation(new Vector3(22.5f, -22.5f, 0f)) * Matrix4.CreateTranslation(new Vector3(-width/2f, -height/2f + 45f, 0f));
 	}
 	
 	public void addTexture(string n, Texture2D t){
-		book.Add(n, t);
+		uiTexturesBook.Add(n, t);
 	}
 	
 	public void toggleAdvancedMode(){
@@ -233,7 +243,7 @@ class Renderer{
 	}
 	
 	public void drawTexture(string n, Vector2 pos, Vector2 sca, Color3 col, float alpha = 1f){
-		if(!book.ContainsKey(n)){
+		if(!uiTexturesBook.ContainsKey(n)){
 			return;
 		}
 		
@@ -243,7 +253,7 @@ class Renderer{
 		uiShader.setMatrix4("model", model);
 		uiShader.setVector4("col", col, alpha);
 		
-		book[n].bind();
+		uiTexturesBook[n].bind();
 		
 		uiMesh.draw();
 	}
@@ -258,7 +268,8 @@ class Renderer{
 	
 	public void drawClock(){
 		Matrix4 rot = Matrix4.CreateRotationZ(MathHelper.DegreesToRadians((float) (360d * dun.sce.smoothTime / dun.sce.smoothTimeMax)));
-		Matrix4 model = Matrix4.CreateScale(new Vector3(30f, 30f, 0f)) * Matrix4.CreateTranslation(new Vector3(-15f, 15f, 0f)) * rot * Matrix4.CreateTranslation(new Vector3(15f, -15f, 0f)) * Matrix4.CreateTranslation(new Vector3(-width/2f, -height/2f + 30f, 0f));
+		
+		Matrix4 model = clockLeft * rot * clockRight;
 		
 		uiShader.use();
 		uiShader.setMatrix4("model", model);
@@ -272,8 +283,6 @@ class Renderer{
 	public void draw(){
 		GL.ClearColor(backgroundColor);
 		GL.Clear(ClearBufferMask.ColorBufferBit);
-		
-		//drawRect(-width/2f, height/2f, width, height, Color3.Gray, 0.6f);
 		
 		cam.startFrame();
 		

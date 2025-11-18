@@ -45,7 +45,7 @@ partial class Dungeon : GameWindow{
 		
 		#if DEBUG
 			using(Dungeon dun = new Dungeon(new NativeWindowSettings{
-				Title = "Dungeon Game - BETA",
+				Title = "InfDun - BETA v" + version,
 				Vsync = VSyncMode.On,
 				ClientSize = new Vector2i(640, 480),
 				Icon = getIcon(),
@@ -55,7 +55,7 @@ partial class Dungeon : GameWindow{
 			}
 		#else
 			using(Dungeon dun = new Dungeon(new NativeWindowSettings{
-				Title = "Dungeon Game - BETA",
+				Title = "InfDun - BETA",
 				Vsync = VSyncMode.On,
 				ClientSize = new Vector2i(640, 480),
 				Icon = getIcon()

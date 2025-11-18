@@ -41,7 +41,7 @@ partial class Dungeon{
 		
 		infoMenu = new UiScreen(
 			new UiText(Placement.TopCenter, 0f, 20f, "Info", Renderer.titleTextColor),
-			new UiText(Placement.TopCenter, 0f, 3f * Renderer.textSize.Y, "Dungeon Game, created by siljamdev", Renderer.selectedTextColor),
+			new UiText(Placement.TopCenter, 0f, 3f * Renderer.textSize.Y, "InfDun, created by siljamdev", Renderer.selectedTextColor),
 			new UiText(Placement.TopCenter, 0f, 4f * Renderer.textSize.Y, "Version v" + version, Renderer.selectedTextColor),
 			new UiText(Placement.TopCenter, 0f, 6f * Renderer.textSize.Y, "Based on Generic game template by siljamdev", Renderer.selectedTextColor),
 			new UiButton(Placement.BottomCenter, 0f, 3f * Renderer.separation, 300f, "GitHub", Renderer.buttonColor).setAction(() => openUrl("https://github.com/siljamdev/InfDun")),

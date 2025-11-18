@@ -63,7 +63,12 @@ class Camera{
 	}
 	
 	public void updateSize(int w, int h){
+		#if DEBUG_ZOOM
+		zoom = h / 100f;
+		#else
 		zoom = h / 18.4f;
+		#endif
+		
 		scale = Matrix4.CreateScale(zoom);
 		
 		updateMatrix();

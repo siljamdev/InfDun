@@ -96,6 +96,8 @@ class Scene{
 	#endif
 	
 	public Scene(Renderer ren, SoundManager s){
+		Console.WriteLine("Initlializing new scene");
+		
 		cam = ren.cam;
 		sm = s;
 		pr = new ParticleRenderer();
@@ -148,7 +150,7 @@ class Scene{
 		mapXsize = m.GetLength(1);
 		
 		//Set limit
-		Necromancer.minionLimit = (levelNum - 2) / 4;
+		Necromancer.minionLimit = (levelNum - 3) / 4;
 		
 		//Entities
 		entities = sortEntities(entities);

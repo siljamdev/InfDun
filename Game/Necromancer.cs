@@ -7,6 +7,7 @@ class Necromancer : Living{
 	static Sound hurtSound;
 	static Sound deathSound;
 	static Sound magicSound;
+	static Sound whisperSound;
 	
 	static readonly Vector2i[] offsets = new Vector2i[]{
 		new Vector2i(-2, -2), new Vector2i(-1, -2), new Vector2i(0, -2), new Vector2i(1, -2), new Vector2i(2, -2),
@@ -22,6 +23,7 @@ class Necromancer : Living{
 		hurtSound = Sound.monoFromAssembly("res.sounds.necrohurt.ogg");
 		deathSound = Sound.monoFromAssembly("res.sounds.necrodeath.ogg");
 		magicSound = Sound.monoFromAssembly("res.sounds.magic.ogg");
+		whisperSound = Sound.monoFromAssembly("res.sounds.necrosnd.ogg");
 	}
 	
 	const int maxDistSq = 16*16;
@@ -33,6 +35,9 @@ class Necromancer : Living{
 	
 	int minionCounter;
 	List<Living> minions = new();
+	
+	double time;
+	double maxTime;
 	
 	public Living target {get; private set;} = null;
 	public Vector2i? posTar => posTarget;
@@ -53,6 +58,10 @@ class Necromancer : Living{
 		if(target == null){
 			setPosTar(sce);
 		}
+		
+		//Sounds
+		time = 0d;
+		maxTime = getRandom(sce, 5d, 15d);
 	}
 	
 	public override bool doTurn(Scene sce){
@@ -252,6 +261,20 @@ class Necromancer : Living{
 	
 	protected override void onAttack(Scene sce, Living s){
 		target = s;
+	}
+	
+	public override void draw(Scene sce){
+		base.draw(sce);
+		
+		time += Dungeon.dh.deltaTime;
+		
+		if(time > maxTime){
+			time = 0d;
+			
+			sce.sm.play(whisperSound, new Vector3(position.X, position.Y, 0f), 0.08f, 0.8f + (float)sce.rand.NextDouble() * 0.5f, 6f);
+			
+			maxTime = getRandom(sce, 7d, 30d);
+		}
 	}
 	
 	public override int getAnimationFrame(Scene sce){

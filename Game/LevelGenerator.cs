@@ -25,11 +25,11 @@ class LevelGenerator{
 		roomPopulator.Add(30); //0, Empty
 		roomPopulator.Add(20); //1, Goblin
 		roomPopulator.Add(10); //2, FastGoblin
-		roomPopulator.Add(10); //3, MedKit
+		roomPopulator.Add(8); //3, MedKit
 		roomPopulator.Add(20); //4, Coin
 		roomPopulator.Add(8); //5, Orb
-		roomPopulator.Add(3); //6, Altar
-		roomPopulator.Add(3); //7, BefriendingAltar
+		roomPopulator.Add(2); //6, Altar
+		roomPopulator.Add(2); //7, BefriendingAltar
 		roomPopulator.Add(2); //8, Necromancer
 	}
 	
@@ -40,15 +40,17 @@ class LevelGenerator{
 		
 		enableEntities();
 		
+		//Init
 		entities = new();
-		
 		rooms = new();
 		
-		int maxRoomSize = Math.Min(6 + 2 * levelNum, 12);
+		//Room size
+		int maxRoomSize = Math.Min(6 + 2 * levelNum, 10);
 		
+		//Room count
 		int min = 4 + (width * height) / 600;
-		
 		int roomCount = rand.Next(min, min + (width * height) / 400);
+		
 		for(int i = 0; i < roomCount; i++){
 			int w = rand.Next(4, maxRoomSize);
 			int h = rand.Next(4, maxRoomSize);
@@ -109,6 +111,15 @@ class LevelGenerator{
 		//Determine wet
 		wetFloor = levelNum > 1 && rand.Next(3) != 0;
 		
+		//Place one treasure room
+		Room treasure = rooms[rand.Next(rooms.Count)];
+		rooms.Remove(treasure);
+		
+		int c = 10 + rand.Next(6);
+		for(int i = 0; i < c; i++){
+			entities.Add(new Coin(getAvailablePos(treasure)));
+		}
+		
 		//Populate
 		foreach(Room r in rooms){
 			populateRoom(r);
@@ -166,6 +177,12 @@ class LevelGenerator{
 			for(int i = 0; i < c; i++){
 				entities.Add(new Goblin(getAvailablePos(r), rand));
 			}
+			
+			//Also some coins
+			c = -1 + rand.Next(5);
+			for(int i = 0; i < c; i++){
+				entities.Add(new Coin(getAvailablePos(r)));
+			}
 			break;
 			
 			case 2: //FastGoblin
@@ -173,14 +190,14 @@ class LevelGenerator{
 			break;
 			
 			case 3: //Medkit
-			c = (levelNum > 5 ? 2 : 1) + rand.Next(3);
+			c = (levelNum > 6 ? 2 : 1) + rand.Next(2);
 			for(int i = 0; i < c; i++){
 				entities.Add(new Medkit(getAvailablePos(r), rand));
 			}
 			break;
 			
 			case 4: //Coin
-			c = 2 + rand.Next(10);
+			c = 2 + rand.Next(12);
 			for(int i = 0; i < c; i++){
 				entities.Add(new Coin(getAvailablePos(r)));
 			}
@@ -298,40 +315,16 @@ class LevelGenerator{
 	Room selectRoomForCorridor(Room current){		
 		var possible = rooms
 			.Where(r => r != current)
+			.Where(r => !current.connections.Contains(r))
 			.Select(r => {
 				double distance = current.distance(r);
-				return (room: r, distance);
-			}).OrderBy(r => r.distance)
+				return (room: r, distance: distance*distance);
+			})
+			.OrderBy(r => r.distance)
 			.Select(r => r.room)
-			.Where(r => !current.connections.Contains(r))
 			.ToArray();
 		
 		return possible[0];
-	}
-	
-	Room selectRandomRoomNear(Room current){
-		const double epsilon = 1e-5;
-		
-		// Use squared distance for performance, still gives relative proximity
-		var weightedRooms = rooms
-			.Where(r => r != current)
-			.Select(r => {
-				double distance = current.distanceSquared(r);
-				double weight = 1.0 / (distance + epsilon);
-				return (room: r, weight);
-			}).ToList();
-		
-		double totalWeight = weightedRooms.Sum(wr => wr.weight);
-		double roll = rand.NextDouble() * totalWeight;
-		
-		double cumulative = 0.0;
-		foreach (var (room, weight) in weightedRooms){
-			cumulative += weight;
-			if (roll <= cumulative)
-				return room;
-		}
-		
-		return weightedRooms[weightedRooms.Count - 1].room; // fallback
 	}
 	
 	Room selectRandomRoomFar(Room current){
