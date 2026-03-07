@@ -8,6 +8,7 @@ class Altar : Entity{
 	
 	public static void initialize(){
 		altarSound = Sound.monoFromAssembly("res.sounds.altar.ogg");
+		BefriendingAltar.initialize(altarSound); //Avoid double sound
 	}
 	
 	protected override int atlasColumn => 11;

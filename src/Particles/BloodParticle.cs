@@ -6,8 +6,8 @@ using AshLib;
 
 class BloodParticle : Particle{
 	
-	Living owner;
-	Scene sce;
+	protected Living owner;
+	protected Scene sce;
 	
 	protected override Vector2 positionOffset => owner.getPos(sce) + new Vector2(0f, lifeFactor * -0.4f);
 	float _r;

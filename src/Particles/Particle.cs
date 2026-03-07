@@ -7,12 +7,12 @@ using AshLib;
 abstract class Particle{
 	static protected Random rand = new Random();
 	
-	protected Vector2 position;
+	public Vector2 position;
 	protected virtual Vector2 positionOffset => Vector2.Zero;
 	protected virtual Vector2 scale => new Vector2(10f);
 	protected virtual float rotation => 0f; //Degrees
 	
-	protected virtual Color3 color => Color3.Cyan;
+	protected virtual Color3 color => Color3.White;
 	protected virtual float alpha => 1f;
 	
 	protected virtual float maxLife => 1f;

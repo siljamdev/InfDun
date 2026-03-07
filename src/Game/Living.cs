@@ -18,6 +18,7 @@ abstract class Living : Entity{
 		Player.initialize();
 		Skeleton.initialize();
 		Necromancer.initialize();
+		Frog.initialize();
 	}
 	#endregion static
 	

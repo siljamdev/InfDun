@@ -284,25 +284,14 @@ public class Mesh : IDisposable{
 		}
 	}
 	
-	public static void cleanup(int VAO, int? VBO, int? EBO){
-		GL.DeleteVertexArray(VAO);
-		
-		if(VBO != null){
-			GL.DeleteBuffer((int) VBO);
-		}
-		
-		if(EBO != null){
-			GL.DeleteBuffer((int) EBO);
-		}
-	}
-	
+	//ONLY call in main thread
 	public void Dispose(){
-		Dungeon.meshesMarkedForDisposal.Add((VAO, VBO, EBO));
 		if(boundVAO == VAO){
 			unbind();
 			boundVAO = 0;
 		}
 		
+		GL.DeleteVertexArray(VAO);
 		VAO = 0;
 		
 		if(VBO != null){
@@ -311,13 +300,18 @@ public class Mesh : IDisposable{
 				boundVBO = 0;
 			}
 			
+			GL.DeleteBuffer((int) VBO);
 			VBO = null;
+		}
+		
+		if(EBO != null){
+			GL.DeleteBuffer((int) EBO);
 		}
 		
 		GC.SuppressFinalize(this);
 	}
 	
 	~Mesh(){
-		Dispose();
+		Dungeon.resourcesMarkedForDisposal.Enqueue(this);
 	}
 }

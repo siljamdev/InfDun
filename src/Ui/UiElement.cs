@@ -1,82 +1,174 @@
 using System;
 using OpenTK;
 using OpenTK.Mathematics;
+using OpenTK.Graphics.OpenGL;
+using AshLib;
 
 abstract class UiElement{
-	public AABB box{get; private set;}
+	public Placement placement{get; private init;}
+	public Vector2 offset{get; private init;}
+	public bool isActive = true; //If it shows up
+	public string description{get; private set;} = null;
+	float? descriptionXsize = null;
 	
-	public Placement placement;
-	public Vector2 offset{get; private set;}
+	public bool needsToUpdate{get; protected set;} = true;
 	
 	//To not have to update it always
 	protected Vector2 pos{get; private set;}
+	protected Vector2 size{get; set;} //Graphical size. DONT SET DIRECTLY!!! ONLY SET DIRECTLY ON INIT!!!
+	public AABB box{get; private set;}
 	
-	public bool needGen{get; protected set;}
-	
-	//Shows up
-	public bool active;
-	
-	public bool hasHover{get; protected set;}
+	public virtual bool canHaveDescription => false;
+	public virtual bool doScissor => true;
 	
 	public UiElement(Placement p, Vector2 o){
-		active = true;
-		
 		placement = p;
-		offset = o;
+		offset = placement switch{
+			//-1, 1
+			Placement.TopLeft => new Vector2(o.X, -o.Y),
+			
+			//1, 1
+			Placement.TopRight => new Vector2(-o.X, -o.Y),
+			
+			//-1, -1
+			Placement.BottomLeft => o,
+			
+			//1, -1
+			Placement.BottomRight => new Vector2(-o.X, o.Y),
+			
+			//0, 1
+			Placement.TopCenter => new Vector2(o.X, -o.Y),
+			
+			//0, -1
+			Placement.BottomCenter => o,
+			
+			//-1, 0
+			Placement.CenterLeft => new Vector2(o.X, -o.Y),
+			
+			//1, 0
+			Placement.CenterRight => new Vector2(-o.X, -o.Y),
+			
+			//0, 0
+			Placement.Center => new Vector2(o.X, -o.Y),
+			_ => new Vector2(o.X, -o.Y)
+		};
 	}
 	
-	public UiElement(Placement p, float x, float y) : this(p, new Vector2(x, y)){
-		
-	}
+	public UiElement(Placement p, float x, float y) : this(p, new Vector2(x, y)){}
 	
 	public void update(Renderer ren){
+		size = updateSize(ren);
 		pos = updatePos(ren);
 		box = updateBox(ren);
 		
-		needGen = false;
+		if(description != null && descriptionXsize == null){
+			descriptionXsize = ren.fr.getXsize(description, Renderer.textSize);
+		}
+		
+		needsToUpdate = false;
 	}
 	
-	protected Vector2 getPos(Renderer ren, Vector2 siz){
+	public UiElement setDescription(string d){
+		if(canHaveDescription){
+			description = d;
+			descriptionXsize = null;
+			
+			needsToUpdate = true;
+		}
+		return this;
+	}
+	
+	protected Vector2 getDefaultPos(Renderer ren){
 		Vector2 dim = new Vector2(ren.width / 2f, ren.height / 2f);
 		
 		switch(placement){
 			case Placement.TopLeft: //-1, 1
-				return new Vector2(-dim.X, dim.Y) + new Vector2(offset.X, -offset.Y);
+				return new Vector2(-dim.X, dim.Y) + offset;
 			
 			case Placement.TopRight: //1, 1
-				return new Vector2(dim.X, dim.Y) + new Vector2(-offset.X, -offset.Y) + new Vector2(-siz.X, 0);
+				return new Vector2(dim.X, dim.Y) + offset + new Vector2(-size.X, 0);
 			
 			case Placement.BottomLeft: //-1, -1
-				return new Vector2(-dim.X, -dim.Y) + new Vector2(offset.X, offset.Y) + new Vector2(0, siz.Y);
+				return new Vector2(-dim.X, -dim.Y) + offset + new Vector2(0, size.Y);
 			
 			case Placement.BottomRight: //1, -1
-				return new Vector2(dim.X, -dim.Y) + new Vector2(-offset.X, offset.Y) + new Vector2(-siz.X, siz.Y);
+				return new Vector2(dim.X, -dim.Y) + offset + new Vector2(-size.X, size.Y);
 			
 			case Placement.TopCenter: //0, 1
-				return new Vector2(0, dim.Y) + new Vector2(offset.X, -offset.Y) + new Vector2(-siz.X / 2f, 0);
+				return new Vector2(0, dim.Y) + offset + new Vector2(-size.X / 2f, 0);
 			
 			case Placement.BottomCenter: //0, -1
-				return new Vector2(0, -dim.Y) + new Vector2(offset.X, offset.Y) + new Vector2(-siz.X / 2f, siz.Y);
+				return new Vector2(0, -dim.Y) + offset + new Vector2(-size.X / 2f, size.Y);
 			
 			case Placement.CenterLeft: //-1, 0
-				return new Vector2(-dim.X, 0) + new Vector2(offset.X, -offset.Y) + new Vector2(0, siz.Y / 2f);
+				return new Vector2(-dim.X, 0) + offset + new Vector2(0, size.Y / 2f);
 			
 			case Placement.CenterRight: //1, 0
-				return new Vector2(dim.X, 0) + new Vector2(-offset.X, -offset.Y) + new Vector2(-siz.X, siz.Y / 2f);
+				return new Vector2(dim.X, 0) + offset + new Vector2(-size.X, size.Y / 2f);
 			
 			default:
 			case Placement.Center: //0, 0
-				return new Vector2(0, 0) + new Vector2(offset.X, -offset.Y) + new Vector2(-siz.X / 2, siz.Y / 2f);
+				return new Vector2(0, 0) + offset + new Vector2(-size.X / 2, size.Y / 2f);
 		}
 	}
 	
-	abstract public void draw(Renderer ren, Vector2d mousePos);
+	public void drawScissored(Renderer ren, Vector2d mousePos){
+		if(doScissor){
+			Vector2 dim = new Vector2(ren.width / 2f, ren.height / 2f);
+			
+			Vector2 correctedPos = pos + dim - new Vector2(0f, size.Y);
+			
+			GL.Enable(EnableCap.ScissorTest);
+			
+			GL.Scissor((int) correctedPos.X, (int) correctedPos.Y, (int) size.X, (int) size.Y);
+			
+			draw(ren, mousePos);
+			
+			GL.Disable(EnableCap.ScissorTest);
+		}else{
+			draw(ren, mousePos);
+		}
+	}
 	
-	abstract public void drawHover(Renderer ren, Vector2d mousePos);
+	public abstract void draw(Renderer ren, Vector2d mousePos);
 	
-	abstract protected AABB updateBox(Renderer ren);
+	protected abstract Vector2 updateSize(Renderer ren);
 	
-	abstract protected Vector2 updatePos(Renderer ren);
+	protected virtual Vector2 updatePos(Renderer ren){
+		return getDefaultPos(ren);
+	}
+	
+	protected virtual AABB updateBox(Renderer ren){
+		return canHaveDescription ? new AABB(pos.Y, pos.Y - size.Y, pos.X, pos.X + size.X) : null;
+	}
+	
+	//Draws description
+	public void drawHover(Renderer ren, Vector2d mousePos){
+		if(description == null){
+			return;
+		}
+		
+		Vector2 mouse = (Vector2) mousePos;
+		
+		Vector2 dSize = new Vector2((float) descriptionXsize + 10f, Renderer.textSize.Y + 10f);
+		
+		if(mouse.X + dSize.X <= ren.width / 2f){
+			ren.drawRect(mouse.X, mouse.Y + Renderer.textSize.Y + 10f, dSize.X, dSize.Y, Renderer.black, 0.5f);
+			ren.fr.drawText(description, mouse.X + 5f, mouse.Y + Renderer.textSize.Y + 5f, Renderer.textSize, Renderer.textColor);
+		}else{
+			if((mouse.X + dSize.X) - (ren.width / 2f) <= (-ren.width / 2f) - (mouse.X - dSize.X)){
+				ren.drawRect(mouse.X, mouse.Y + Renderer.textSize.Y + 10f, dSize.X, dSize.Y, Renderer.black, 0.5f);
+				ren.fr.drawText(description, mouse.X + 5f, mouse.Y + Renderer.textSize.Y + 5f, Renderer.textSize, Renderer.textColor);
+			}else{
+				ren.drawRect(mouse.X - dSize.X, mouse.Y + Renderer.textSize.Y + 10f, dSize.X, dSize.Y, Renderer.black, 0.5f);
+				ren.fr.drawText(description, mouse.X - dSize.X + 5f, mouse.Y + Renderer.textSize.Y + 5f, Renderer.textSize, Renderer.textColor);
+			}
+		}
+	}
+	
+	protected static Color3 getHoverColor(Color3 c){
+		return new Color3((byte) (c.R * 1.2f), (byte) (c.G * 1.2f), c.B);
+	}
 }
 
 enum Placement{

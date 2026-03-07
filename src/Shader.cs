@@ -238,20 +238,37 @@ public class Shader : IDisposable{
 		GL.Uniform2(uniforms[name], data.X, data.Y);
 	}
 	
+	public void setVector2Array(string name, Vector2[] data){
+		this.use();
+		if(!name.EndsWith("[0]")){
+			GL.Uniform2(uniforms[name], data.Length, data.SelectMany(h => new float[]{h.X, h.Y}).ToArray());
+		}else{
+			GL.Uniform2(GL.GetUniformLocation(this.id, name), data.Length, data.SelectMany(h => new float[]{h.X, h.Y}).ToArray());
+		}
+	}
+	
+	//Set one of the elements
+	public void setVector2ArrayMember(string name, int index, Vector2 data){
+		this.use();
+		GL.Uniform2(GL.GetUniformLocation(this.id, name + "[" + index + "]"), data.X, data.Y);
+	}
+	
 	public void setVector2i(string name, Vector2i data){
 		this.use();
 		GL.Uniform2(uniforms[name], data.X, data.Y);
 	}
 	
+	//ONLY call in main thread
 	public void Dispose(){
 		if(activeShader == this.id){
 			activeShader = 0;
 		}
 		GL.DeleteProgram(this.id);
+		
 		GC.SuppressFinalize(this);
 	}
 	
 	~Shader(){
-		Dispose();
+		Dungeon.resourcesMarkedForDisposal.Enqueue(this);
 	}
 }

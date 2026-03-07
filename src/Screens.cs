@@ -12,13 +12,11 @@ partial class Dungeon{
 	
 	UiScreen helpMenu;
 	
-	UiScreen optionsMenu = null!;
-	UiCheck vsync;
-	UiField maxFpsF;
-	UiCheck sound;
-	UiCheck particles;
+	public UiScreen[] optionsPages;
+	public UiScreen[] controlsPages;
 	
-	UiScreen controlsMenu = null!;
+	UiScreen optionsMenu => optionsPages[0];
+	UiScreen controlsMenu => controlsPages[0];
 	
 	UiScreen pauseMenu;
 	
@@ -27,26 +25,26 @@ partial class Dungeon{
 	UiText high;
 	
 	void initializeScreens(){
-		highscor = new UiText(Placement.BottomCenter, 0f, 20f, "Highscore: -1", new Color3("FFFF70"));
+		highscor = new UiText(Placement.BottomCenter, 0f, 20f, "Highscore: -1").setColor(new Color3("FFFF70"));
 		
 		mainMenu = new UiScreen(
-			new UiImage(Placement.TopCenter, 0, 20, 110, 110, "icon", Color3.White),
+			new UiImage(Placement.TopCenter, 0, 20, 110, 110, "icon").setColor(Color3.White),
 			highscor,
-			new UiButton(Placement.Center, 0, -1f * Renderer.separation, 300f, "Play", Renderer.buttonColor).setAction(setNewScene),
-			new UiButton(Placement.Center, 0, 0, 300f, "Options", Renderer.buttonColor).setAction(() => ren.setScreen(optionsMenu)),
-			new UiButton(Placement.Center, 0, 2f * Renderer.separation, 300f, "Exit", Renderer.greenButtonColor).setAction(Close),
-			new UiImageButton(Placement.BottomRight, 0, 0, 35f, 35f, "info", Renderer.textColor).setDescription("Info").setAction(() => ren.setScreen(infoMenu)),
-			new UiImageButton(Placement.BottomLeft, 0, 0, 35f, 35f, "help", Renderer.textColor).setDescription("Help").setAction(() => ren.setScreen(helpMenu))
+			new UiButton(Placement.Center, 0, -1f * Renderer.separation, 300f, "Play").setAction(setNewScene),
+			new UiButton(Placement.Center, 0, 0, 300f, "Options").setAction(() => ren.setScreen(optionsMenu)),
+			new UiButton(Placement.Center, 0, 2f * Renderer.separation, 300f, "Exit").setColor(Renderer.greenButtonColor).setAction(Close),
+			new UiImageButton(Placement.BottomRight, 0, 0, 35f, 35f, "info").setAction(() => ren.setScreen(infoMenu)).setDescription("Info"),
+			new UiImageButton(Placement.BottomLeft, 0, 0, 35f, 35f, "help").setAction(() => ren.setScreen(helpMenu)).setDescription("Help")
 		);
 		
 		infoMenu = new UiScreen(
-			new UiText(Placement.TopCenter, 0f, 20f, "Info", Renderer.titleTextColor),
-			new UiText(Placement.TopCenter, 0f, 3f * Renderer.textSize.Y, "InfDun, created by siljamdev", Renderer.selectedTextColor),
-			new UiText(Placement.TopCenter, 0f, 4f * Renderer.textSize.Y, "Version v" + version, Renderer.selectedTextColor),
-			new UiText(Placement.TopCenter, 0f, 6f * Renderer.textSize.Y, "Based on Generic game template by siljamdev", Renderer.selectedTextColor),
-			new UiButton(Placement.BottomCenter, 0f, 3f * Renderer.separation, 300f, "GitHub", Renderer.buttonColor).setAction(() => openUrl("https://github.com/siljamdev/InfDun")),
-			new UiButton(Placement.BottomCenter, 0f, 1f * Renderer.separation, 300f, "Close", Renderer.redButtonColor).setAction(ren.closeScreen)
-		).setScrollingLog(new UiLog(20f, 20f, 8f * Renderer.textSize.Y, Renderer.textColor,
+			new UiText(Placement.TopCenter, 0f, 20f, "Info").setColor(Renderer.titleTextColor),
+			new UiText(Placement.TopCenter, 0f, 3f * Renderer.textSize.Y, "InfDun, created by siljamdev").setColor(Renderer.selectedTextColor),
+			new UiText(Placement.TopCenter, 0f, 4f * Renderer.textSize.Y, "Version v" + version).setColor(Renderer.selectedTextColor),
+			new UiText(Placement.TopCenter, 0f, 6f * Renderer.textSize.Y, "Based on Generic game template by siljamdev").setColor(Renderer.selectedTextColor),
+			new UiButton(Placement.BottomCenter, 0f, 2f * Renderer.separation, 300f, "GitHub").setAction(() => openUrl("https://github.com/siljamdev/InfDun")),
+			new UiButton(Placement.BottomCenter, 0f, 1f * Renderer.separation, 300f, "Close").setColor(Renderer.redButtonColor).setAction(ren.closeScreen)
+		).addScrollingLog(new UiLog(20f, 20f, 8f * Renderer.textSize.Y,
 					"NO GENERATIVE AI WAS USED IN THE CREATION OF THE ASSETS OF THIS GAME",
 					"AI was only used to write small, unimportant and repetitive parts of the game's code, and was always reviewed and tweaked by me (a human) afterwards",
 					"All textures were created by hand using the amazing paint.net",
@@ -54,9 +52,9 @@ partial class Dungeon{
 		));
 		
 		helpMenu = new UiScreen(
-			new UiText(Placement.TopCenter, 0f, 20f, "Help", Renderer.titleTextColor),
-			new UiButton(Placement.BottomCenter, 0f, 1f * Renderer.separation, 300f, "Close", Renderer.redButtonColor).setAction(ren.closeScreen)
-		).setScrollingLog(new UiLog(20f, 20f, 3f * Renderer.textSize.Y, Renderer.textColor,
+			new UiText(Placement.TopCenter, 0f, 20f, "Help").setColor(Renderer.titleTextColor),
+			new UiButton(Placement.BottomCenter, 0f, 1f * Renderer.separation, 300f, "Close").setColor(Renderer.redButtonColor).setAction(ren.closeScreen)
+		).addScrollingLog(new UiLog(20f, 20f, 3f * Renderer.textSize.Y,
 					"This game is a turn based dungeon crawler",
 					"You control the player, and your objective is getting the most points before dying",
 					"The game works on turns, each turn you can do one action(either moving, or attacking), and then, other creatures will do their turn",
@@ -66,103 +64,204 @@ partial class Dungeon{
 					"Try to get the best highscore and challenge your friends"
 		));
 		
-		vsync = new UiCheck(Placement.Center, 0f, -2f * Renderer.separation, Renderer.textSize.Y + 10f, Renderer.textSize.Y + 10f, "Vsync:", config.GetValue<bool>("vsync"), Renderer.buttonColor);
-		maxFpsF = new UiField(Placement.Center, 0f, -1f * Renderer.separation, 30f, "Max FPS:", maxFps.ToString(), 6, WritingType.FloatPositive);
-		sound = new UiCheck(Placement.Center, 0f, 0f * Renderer.separation, Renderer.textSize.Y + 10f, Renderer.textSize.Y + 10f, "Sound:", config.GetValue<bool>("sound"), Renderer.buttonColor);
-		particles = new UiCheck(Placement.Center, 0f, 1f * Renderer.separation, Renderer.textSize.Y + 10f, Renderer.textSize.Y + 10f, "Particles:", config.GetValue<bool>("particles"), Renderer.buttonColor);
+		(string key, object value, string description)[] options = getConfigurableOptions();
+		List<UiElement> optionsFields = new(options.Length);
 		
-		optionsMenu = new UiScreen(
-			new UiText(Placement.TopCenter, 0f, 20f, "Options", Renderer.titleTextColor),
-			vsync,
-			maxFpsF,
-			sound,
-			particles,
-			new UiButton(Placement.BottomCenter, 0f, 3f * Renderer.separation, 300f, "Controls", Renderer.buttonColor).setAction(() => ren.setScreen(controlsMenu)),
-			new UiButton(Placement.BottomCenter, 0f, 2f * Renderer.separation, 300f, "Save", Renderer.greenButtonColor).setAction(() => {
-				config.Set("vsync", vsync.on);
-				
-				if(float.TryParse(maxFpsF.text, out float f)){
-					config.Set("maxFps", f);
-					optionsMenu.showError("");
-				}else{
-					optionsMenu.showError("Invalid max fps number");
+		const int optionsPerPage = 6;
+		optionsPages = new UiScreen[(int) Math.Ceiling(options.Length / (float) optionsPerPage)];
+		
+		UiText optionsErrorText = new UiText(Placement.BottomCenter, 0f, 180f, "").setColor(Renderer.redTextColor);
+		
+		//Helper
+		void saveOptions(){
+			bool hasError = false;
+			
+			int i = 0;
+			foreach((string key, object value, string description) in options){
+				if(value is bool){
+					config.Set(key, ((UiCheck) optionsFields[i]).isChecked);
+				}else if(value is string){
+					config.Set(key, ((UiField) optionsFields[i]).text);
+				}else if(value is float){
+					if(float.TryParse(((UiField) optionsFields[i]).text, out float f)){
+						config.Set(key, f);
+					}else{
+						optionsErrorText.setText("Invalid float: " + description);
+						hasError = true;
+					}
+				}else if(value is int){
+					if(int.TryParse(((UiField) optionsFields[i]).text, out int f)){
+						config.Set(key, f);
+					}else{
+						optionsErrorText.setText("Invalid int: " + description);
+						hasError = true;
+					}
+				}else if(value is Color3){
+					if(Color3.TryParse(((UiField) optionsFields[i]).text, out Color3 f)){
+						config.Set(key, f);
+					}else{
+						optionsErrorText.setText("Invalid color: " + description);
+						hasError = true;
+					}
 				}
 				
-				config.Set("sound", sound.on);
-				config.Set("particles", particles.on);
-				
+				i++;
+			}
+			
+			if(!hasError){
+				optionsErrorText.setText("");
 				config.Save();
+				loadConfig();
 				
-				setVsync(config.GetValue<bool>("vsync"));
-				maxFps = config.GetValue<float>("maxFps");
-				this.UpdateFrequency = maxFps;
-				sm.isActive = config.GetValue<bool>("sound");
-				ParticleRenderer.isActive = config.GetValue<bool>("particles");
-			}),
-			new UiButton(Placement.BottomCenter, 0f, 1f * Renderer.separation, 300f, "Close", Renderer.redButtonColor).setAction(ren.closeScreen)
-		).setErrorText(new UiText(Placement.BottomCenter, 0f, 200f, "", Renderer.redTextColor));
-		
-		controlsMenu = new UiScreen(
-			new UiText(Placement.TopCenter, 0f, 20f, "Controls", Renderer.titleTextColor),
-			new UiKeyField(Placement.Center, 0f, -4f * Renderer.separation, "Fullscreen:", fullscreen),
-			new UiKeyField(Placement.Center, 0f, -3f * Renderer.separation, "Screenshot:", screenshot),
-			new UiKeyField(Placement.Center, 0f, -2f * Renderer.separation, "Advanced mode:", advancedMode),
-			new UiKeyField(Placement.Center, 0f, -1f * Renderer.separation, "Move up:", moveUp),
-			new UiKeyField(Placement.Center, 0f, 0f, "Move down:", moveDown),
-			new UiKeyField(Placement.Center, 0f, 1f * Renderer.separation, "Move left:", moveLeft),
-			new UiKeyField(Placement.Center, 0f, 2f * Renderer.separation, "Move right:", moveRight),
-			new UiButton(Placement.BottomCenter, 0f, 2f * Renderer.separation, 300f, "Save", Renderer.greenButtonColor).setAction(saveControls),
-			new UiButton(Placement.BottomCenter, 0f, 1f * Renderer.separation, 300f, "Close", Renderer.redButtonColor).setAction(ren.closeScreen)
-		).setErrorText(new UiText(Placement.BottomCenter, 0f, 200f, "", Renderer.redTextColor));
-		
-		pauseMenu = new UiScreen(
-			new UiText(Placement.TopCenter, 0f, 20f, "Pause", Renderer.titleTextColor),
-			new UiButton(Placement.Center, 0f, -1f * Renderer.separation, 300f, "Close", Renderer.redButtonColor).setAction(ren.closeScreen),
-			new UiButton(Placement.Center, 0f, 0f, 300f, "Options", Renderer.buttonColor).setAction(() => ren.setScreen(optionsMenu)),
-			new UiButton(Placement.Center, 0f, 2f * Renderer.separation, 300f, "Exit to menu", Renderer.greenButtonColor).setAction(closeScene),
-			new UiImageButton(Placement.CenterLeft, 0f, 0f, 35f, 35f, "screenshot", Renderer.textColor).setDescription("Take screenshot").setAction(() => {
-				ren.closeScreen();
-				takeScreenshotNextTick = true;
-			})
-		);
-		
-		score = new UiText(Placement.Center, 0f, 10f, "Score: -1", Renderer.textColor).setCharSize(new Vector2(22f, 28f));
-		high = new UiText(Placement.Center, 0f, 50f, "Highscore: -1", new Color3("FFFF70"));
-		
-		deathMenu = new UiScreen(
-			new UiText(Placement.Center, 0f, -60f, "You died", Color3.Red).setCharSize(Renderer.bigTextSize),
-			score,
-			high,
-			new UiButton(Placement.BottomCenter, -120f, 1f * Renderer.separation, 200f, "Return to menu", Renderer.redButtonColor).setAction(closeScene),
-			new UiButton(Placement.BottomCenter, 120f, 1f * Renderer.separation, 200f, "Play again", Renderer.redButtonColor).setAction(setNewScene)
-		);
-	}
-	
-	void saveControls(){
-		int[] k = new List<Keys>{
-			fullscreen.key,
-			screenshot.key,
-			advancedMode.key,
-			moveUp.key,
-			moveDown.key,
-			moveLeft.key,
-			moveRight.key
-		}.Select(n => (int) n).ToArray();
-		
-		HashSet<Keys> seen = new HashSet<Keys>();
-		
-		foreach(Keys key in k){
-			if(!seen.Add(key)){
-				controlsMenu.showError("Conflict found");
-				return;
+				ren.setCornerInfo("Saved config", Renderer.selectedTextColor);
 			}
 		}
 		
-		controlsMenu.showError("");
+		//Helper
+		void resetOptions(){
+			resetConfig();
+			
+			int i = 0;
+			foreach((string key, object value, string description) in options){
+				if(value is bool){
+					((UiCheck) optionsFields[i]).isChecked = config.GetValue<bool>(key);
+				}else if(value is string){
+					((UiField) optionsFields[i]).setText(config.GetValue<string>(key));
+				}else if(value is float){
+					((UiField) optionsFields[i]).setText(config.GetValue<float>(key).ToString());
+				}else if(value is int){
+					((UiField) optionsFields[i]).setText(config.GetValue<int>(key).ToString());
+				}else if(value is Color3){
+					((UiField) optionsFields[i]).setText(config.GetValue<Color3>(key).ToString());
+				}
+				
+				i++;
+			}
+		}
 		
-		config.Set("controls", k);
+		int j = 0;
+		foreach(var ka in options.Chunk(optionsPerPage)){
+			List<UiElement> pageElements = new(6);
+			pageElements.Add(new UiText(Placement.TopCenter, 0f, 20f, "Options - " + (j + 1)).setColor(Renderer.titleTextColor));
+			
+			int i = -4;
+			foreach((string key, object value, string description) in ka){
+				if(value is bool){
+					pageElements.Add(new UiCheck(Placement.Center, 0f, i * Renderer.separation, Renderer.textSize.Y + 10f, Renderer.textSize.Y + 10f, description + ":", config.GetValue<bool>(key)));
+				}else if(value is string){
+					pageElements.Add(new UiField(Placement.Center, 0f, i * Renderer.separation, 100f, description + ":", config.GetValue<string>(key), 16, WritingType.String));
+				}else if(value is float){
+					pageElements.Add(new UiField(Placement.Center, 0f, i * Renderer.separation, 30f, description + ":", config.GetValue<float>(key).ToString(), 6, WritingType.FloatPositive));
+				}else if(value is int){
+					pageElements.Add(new UiField(Placement.Center, 0f, i * Renderer.separation, 30f, description + ":", config.GetValue<int>(key).ToString(), 4, WritingType.Int));
+				}else if(value is Color3){
+					pageElements.Add(new UiField(Placement.Center, 0f, i * Renderer.separation, 60f, description + ":", config.GetValue<Color3>(key).ToString(), 7, WritingType.Hex));
+				}else{
+					optionsFields.Add(null);
+					continue;
+				}
+				
+				optionsFields.Add(pageElements.Last());
+				
+				i++;
+			}
+			
+			int s = j; //For lambdas, j cant be used, because a reference to the changing varible is kept
+			
+			pageElements.Add(new UiImageButton(Placement.BottomLeft, 0f, 0f, 35f, 35f, "file").setAction(() => {
+				openFolder(dep.path);
+			}).setDescription("Open data directory"));
+			
+			pageElements.Add(new UiButton(Placement.BottomCenter, 0f, 3f * Renderer.separation, 300f, "Controls").setAction(() => ren.setScreen(controlsPages[0])));
+			pageElements.Add(new UiButton(Placement.BottomCenter, -79f, 2f * Renderer.separation, 142f, "Save").setColor(Renderer.greenButtonColor).setAction(saveOptions));
+			pageElements.Add(new UiButton(Placement.BottomCenter, 79f, 2f * Renderer.separation, 142f, "Reset").setAction(resetOptions));
+			pageElements.Add(new UiButton(Placement.BottomCenter, 0f, 1f * Renderer.separation, 300f, "Close").setColor(Renderer.redButtonColor).setAction(ren.closeScreen));
+			
+			if(j > 0){
+				pageElements.Add(new UiImageButton(Placement.CenterLeft, 10f, 0f, 45f, 45f, "previous").setAction(() => {
+					ren.closeScreen();
+					ren.setScreen(optionsPages[s - 1]);
+				}));
+			}
+			
+			if(j < optionsPages.Length - 1){
+				pageElements.Add(new UiImageButton(Placement.CenterRight, 10f, 0f, 45f, 45f, "next").setAction(() => {
+					ren.closeScreen();
+					ren.setScreen(optionsPages[s + 1]);
+				}));
+			}
+			
+			optionsPages[j] = new UiScreen(
+				pageElements.ToArray()
+			).addErrorText(optionsErrorText);
+			
+			j++;
+		}
 		
-		config.Save();
+		
+		
+		
+		const int keybindsPerPage = 7;
+		controlsPages = new UiScreen[(int) Math.Ceiling(KeyBind.configurables.Count / (float) keybindsPerPage)];
+		
+		j = 0;
+		foreach(var ka in KeyBind.configurables.Chunk(keybindsPerPage)){
+			List<UiElement> controlsElements = new(4);
+			controlsElements.Add(new UiText(Placement.TopCenter, 0f, 20f, "Controls - " + (j + 1)).setColor(Renderer.titleTextColor));
+			
+			int i = -4;
+			foreach(KeyBind k in ka){
+				controlsElements.Add(new UiKeyField(Placement.Center, 0f, i * Renderer.separation, k.configDescription + ":", k));
+				i++;
+			}
+			
+			controlsElements.Add(new UiButton(Placement.BottomCenter, -79f, 2f * Renderer.separation, 142f, "Save").setColor(Renderer.greenButtonColor).setAction(saveControls));
+			controlsElements.Add(new UiButton(Placement.BottomCenter, 79f, 2f * Renderer.separation, 142f, "Reset").setAction(resetControls));
+			controlsElements.Add(new UiButton(Placement.BottomCenter, 0f, 1f * Renderer.separation, 300f, "Close").setColor(Renderer.redButtonColor).setAction(ren.closeScreen));
+			
+			int s = j;
+			if(j > 0){
+				controlsElements.Add(new UiImageButton(Placement.CenterLeft, 10f, 0f, 45f, 45f, "previous").setAction(() => {
+					ren.closeScreen();
+					ren.setScreen(controlsPages[s - 1]);
+				}));
+			}
+			
+			if(j < controlsPages.Length - 1){
+				controlsElements.Add(new UiImageButton(Placement.CenterRight, 10f, 0f, 45f, 45f, "next").setAction(() => {
+					ren.closeScreen();
+					ren.setScreen(controlsPages[s + 1]);
+				}));
+			}
+			
+			controlsPages[j] = new UiScreen(
+				controlsElements.ToArray()
+			);
+			
+			j++;
+		}
+		
+		pauseMenu = new UiScreen(
+			new UiText(Placement.TopCenter, 0f, 20f, "Pause").setColor(Renderer.titleTextColor),
+			new UiButton(Placement.Center, 0f, -1f * Renderer.separation, 300f, "Close").setColor(Renderer.redButtonColor).setAction(ren.closeScreen),
+			new UiButton(Placement.Center, 0f, 0f, 300f, "Options").setAction(() => ren.setScreen(optionsMenu)),
+			new UiButton(Placement.Center, 0f, 2f * Renderer.separation, 300f, "Exit to menu").setColor(Renderer.greenButtonColor).setAction(closeScene),
+			new UiImageButton(Placement.CenterLeft, 0f, 0f, 35f, 35f, "screenshot").setAction(() => {
+				ren.closeScreen();
+				takeScreenshotNextTick = true;
+			}).setDescription("Take screenshot")
+		);
+		
+		score = new UiText(Placement.Center, 0f, 10f, "Score: -1").setCharSize(Renderer.middleTextSize);
+		high = new UiText(Placement.Center, 0f, 50f, "Highscore: -1").setColor(new Color3("FFFF70"));
+		
+		deathMenu = new UiScreen(
+			new UiText(Placement.Center, 0f, -60f, "You died").setColor(Color3.Red).setCharSize(Renderer.bigTextSize),
+			score,
+			high,
+			new UiButton(Placement.BottomCenter, -120f, 1f * Renderer.separation, 200f, "Return to menu").setColor(Renderer.redButtonColor).setAction(closeScene),
+			new UiButton(Placement.BottomCenter, 120f, 1f * Renderer.separation, 200f, "Play again").setColor(Renderer.redButtonColor).setAction(setNewScene)
+		);
 	}
 	
 	static void openUrl(string url){
@@ -180,6 +279,24 @@ partial class Dungeon{
 				Process.Start("open", url);
 			}
 		}
-		catch(Exception e){}
+		catch{}
+	}
+	
+	static void openFolder(string path){
+		try{
+			if(OperatingSystem.IsWindows()){
+				Process.Start(new ProcessStartInfo{
+					FileName = path,
+					UseShellExecute = true
+				});
+			}
+			else if(OperatingSystem.IsLinux()){
+				Process.Start("xdg-open", path);
+			}
+			else if(OperatingSystem.IsMacOS()){
+				Process.Start("open", path);
+			}
+		}
+		catch{}
 	}
 }

@@ -19,8 +19,8 @@ public class Texture2D : IDisposable{
 	
 	public TextureUnit unit => unitFromInt(_unit);
 	
-	public Texture2D(ImageResult image, TextureParams tp, int u = 0, string name = null){	
-		this.internalFormat = PixelInternalFormat.Rgba8;
+	public Texture2D(ImageResult image, TextureParams tp, int u = 0, string name = null){
+		this.internalFormat = ConvertFormatInternal(image.Comp);
 		
 		this.width = image.Width; //Extract this needed values
 		this.height = image.Height;
@@ -52,7 +52,7 @@ public class Texture2D : IDisposable{
 		GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int) tp.filterMax);
 		
 		
-		GL.TexImage2D(TextureTarget.Texture2D, 0, this.internalFormat, this.width, this.height, 0, tp.imageFormat, PixelType.UnsignedByte, image.Data); //actually generate the texture
+		GL.TexImage2D(TextureTarget.Texture2D, 0, this.internalFormat, this.width, this.height, 0, ConvertFormatSource(image.Comp), PixelType.UnsignedByte, image.Data); //actually generate the texture
 		
 		//if needed, generate mipmaps
 		if(tp.filterMin == TextureMinFilter.NearestMipmapNearest || tp.filterMin == TextureMinFilter.LinearMipmapNearest || tp.filterMin == TextureMinFilter.NearestMipmapLinear || tp.filterMin == TextureMinFilter.LinearMipmapLinear){
@@ -65,8 +65,8 @@ public class Texture2D : IDisposable{
 	
 	//Disposes of the stream
 	public static Texture2D fromStream(Stream s, TextureParams tp, int u = 0, string name = null){
-		ImageResult image = ImageResult.FromStream(s, ConvertFormat(tp.imageFormat));
-		if (image == null || image.Data == null){
+		ImageResult image = ImageResult.FromStream(s, ConvertFormatSTB(tp.imageFormat));
+		if(image == null || image.Data == null){
 			throw new Exception("Image loading failed from stream (" + name + ")");
 		}
 		Texture2D t = new Texture2D(image, tp, u, name);
@@ -83,7 +83,7 @@ public class Texture2D : IDisposable{
 	}
 	
 	public static Texture2D fromBytes(byte[] data, TextureParams tp, int u = 0, string name = null){
-		ImageResult image = ImageResult.FromMemory(data, ConvertFormat(tp.imageFormat));
+		ImageResult image = ImageResult.FromMemory(data, ConvertFormatSTB(tp.imageFormat));
 		if (image == null || image.Data == null){
 			throw new Exception("Image loading failed from byte array (" + name + ")");
 		}
@@ -100,15 +100,51 @@ public class Texture2D : IDisposable{
 		}
 	}
 	
-	static ColorComponents ConvertFormat(PixelFormat pixelFormat){
-        switch (pixelFormat){
+	static ColorComponents ConvertFormatSTB(PixelFormat pixelFormat){
+        switch(pixelFormat){
             case PixelFormat.Rgb:
                 return ColorComponents.RedGreenBlue;
             case PixelFormat.Rgba:
                 return ColorComponents.RedGreenBlueAlpha;
+			case PixelFormat.Red:
+                return ColorComponents.Grey;
+			case PixelFormat.Rg:
+                return ColorComponents.GreyAlpha;
             // Add more cases for other pixel formats as needed
             default:
-                throw new ArgumentException("Unsupported pixel format in conversion");
+                throw new ArgumentException("Unsupported pixel format in conversion: " + pixelFormat);
+        }
+    }
+	
+	static PixelInternalFormat ConvertFormatInternal(ColorComponents cc){
+        switch(cc){
+            case ColorComponents.Grey:
+                return PixelInternalFormat.R8;
+            case ColorComponents.GreyAlpha:
+                return PixelInternalFormat.Rg8;
+			case ColorComponents.RedGreenBlue:
+                return PixelInternalFormat.Rgb8;
+            case ColorComponents.RedGreenBlueAlpha:
+                return PixelInternalFormat.Rgba8;
+            // Add more cases for other pixel formats as needed
+            default:
+                throw new ArgumentException("Unsupported pixel format in conversion: " + cc);
+        }
+    }
+	
+	static PixelFormat ConvertFormatSource(ColorComponents cc){
+        switch(cc){
+            case ColorComponents.Grey:
+                return PixelFormat.Red;
+            case ColorComponents.GreyAlpha:
+                return PixelFormat.Rg;
+			case ColorComponents.RedGreenBlue:
+                return PixelFormat.Rgb;
+            case ColorComponents.RedGreenBlueAlpha:
+                return PixelFormat.Rgba;
+            // Add more cases for other pixel formats as needed
+            default:
+                throw new ArgumentException("Unsupported pixel format in conversion: " + cc);
         }
     }
 	
@@ -158,12 +194,12 @@ public class Texture2D : IDisposable{
 		}
 	}
 	
-	public static void cleanup(int tid){
-		GL.DeleteTexture(tid);
-	}
-	
+	//ONLY call in main thread
 	public void Dispose(){
-		Dungeon.texturesMarkedForDisposal.Add(this.id);
+		if(this.id != 0){
+			GL.DeleteTexture(this.id);
+			this.id = 0;
+		}
 		
 		if(activeTexture[_unit] == this.id){
 			activeTexture[_unit] = 0;
@@ -173,7 +209,7 @@ public class Texture2D : IDisposable{
 	}
 	
 	~Texture2D(){
-		Dispose();
+		Dungeon.resourcesMarkedForDisposal.Enqueue(this);
 	}
 }
 

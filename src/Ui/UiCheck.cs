@@ -5,93 +5,87 @@ using AshLib;
 
 //Checkbox
 class UiCheck : UiClickable{
-	string question;
-	
-	public string? description;
-	
-	Vector2 size;
+	public string question{get; private init;}
 	
 	public Color3 tickColor;
 	public Color3 hoverTickColor;
 	public Color3 color;
 	public Color3 hoverColor;
+	public Color3 questionColor;
 	
-	public bool on;
+	public bool isChecked;
 	
-	public UiCheck(Placement p, float x, float y, float xs, float ys, string q, bool o, Color3 c, Color3 tc, Color3 hc) : base(p, x, y){				
+	float xSize;
+	float ySize;
+	float qSize;
+	
+	public UiCheck(Placement p, float x, float y, float xs, float ys, string q, bool o) : base(p, x, y){				
 		question = q;
-		on = o;
+		isChecked = o;
 		
-		size = new Vector2(question.Length * Renderer.textSize.X + 10f + xs, Math.Max(ys, Renderer.textSize.Y));
+		xSize = xs;
+		ySize = ys;
 		
-		color = c;
-		hoverColor = new Color3((byte) (color.R * 1.2f), (byte) (color.G * 1.2f), color.B);
-		tickColor = tc;
-		hoverTickColor = hc;
+		color = Renderer.buttonColor;
+		hoverColor = getHoverColor(color);
+		tickColor = Renderer.textColor;
+		hoverTickColor = Renderer.selectedTextColor;
+		questionColor = Renderer.textColor;
 		
 		setAction(toggle);
 	}
 	
-	public UiCheck(Placement p, float x, float y, float xs, float ys, string q, bool o, Color3 c) : this(p, x, y, xs, ys, q, o, c, Renderer.textColor, Renderer.selectedTextColor){
-		
+	public UiCheck setColor(Color3 c){
+		color = c;
+		hoverColor = getHoverColor(color);
+		return this;
 	}
 	
-	public UiCheck setDescription(string d){
-		description = d;
-		hasHover = true;
+	public UiCheck setQuestionColor(Color3 q){
+		questionColor = q;
+		return this;
+	}
+	
+	public UiCheck setTickColor(Color3 t, Color3 ht){
+		tickColor = t;
+		hoverTickColor = ht;
 		return this;
 	}
 	
 	public void toggle(){
-		on = !on;
+		isChecked = !isChecked;
 	}
 	
 	public override void draw(Renderer ren, Vector2d mousePos){
-		Vector2 fsize = size - new Vector2(question.Length * Renderer.textSize.X + 10f, 0f);
-		
-		Vector2 fpos = pos + new Vector2(question.Length * Renderer.textSize.X + 10f, 0f);
+		Vector2 fsize = size - new Vector2(qSize + 10f, 0f);
+		Vector2 fpos = pos + new Vector2(qSize + 10f, 0f);
 		
 		if(box != null && box % mousePos){
 			ren.drawRect(fpos, fsize, hoverColor);
-			if(on){
+			if(isChecked){
 				ren.drawTexture("tick", fpos, fsize, hoverTickColor);
 			}
 		}else{
 			ren.drawRect(fpos, fsize, color);
-			if(on){
+			if(isChecked){
 				ren.drawTexture("tick", fpos, fsize, tickColor);
 			}
 		}
-		ren.fr.drawText(question, pos + new Vector2(0f, -((size.Y - Renderer.textSize.Y)/2f)), Renderer.textSize, Renderer.textColor, 1f);
+		ren.fr.drawText(question, pos + new Vector2(0f, -((size.Y - Renderer.textSize.Y)/2f)), Renderer.textSize, questionColor, 1f);
 	}
 	
-	public override void drawHover(Renderer ren, Vector2d mousePos){
-		Vector2 mouse = (Vector2) mousePos;
-		
-		Vector2 size = new Vector2(description.Length * Renderer.textSize.X + 10f, Renderer.textSize.Y + 10f);
-		
-		if(mouse.X + size.X <= ren.width / 2f){
-			ren.drawRect(mouse.X, mouse.Y + Renderer.textSize.Y + 10f, size.X, size.Y, Renderer.black, 0.5f);
-			ren.fr.drawText(description, mouse.X + 5f, mouse.Y + Renderer.textSize.Y + 5f, Renderer.textSize, Renderer.textColor);
-		}else{
-			if((mouse.X + size.X) - (ren.width / 2f) <= (-ren.width / 2f) - (mouse.X - size.X)){
-				ren.drawRect(mouse.X, mouse.Y + Renderer.textSize.Y + 10f, size.X, size.Y, Renderer.black, 0.5f);
-				ren.fr.drawText(description, mouse.X + 5f, mouse.Y + Renderer.textSize.Y + 5f, Renderer.textSize, Renderer.textColor);
-			}else{
-				ren.drawRect(mouse.X - size.X, mouse.Y + Renderer.textSize.Y + 10f, size.X, size.Y, Renderer.black, 0.5f);
-				ren.fr.drawText(description, mouse.X - size.X + 5f, mouse.Y + Renderer.textSize.Y + 5f, Renderer.textSize, Renderer.textColor);
-			}
+	protected override Vector2 updateSize(Renderer ren){
+		if(size != Vector2.Zero){
+			return size;
 		}
-	}
-	
-	protected override Vector2 updatePos(Renderer ren){
-		return base.getPos(ren, size);
+		
+		qSize = ren.fr.getXsize(question, Renderer.textSize);
+		return new Vector2(qSize + 10f + xSize, Math.Max(ySize, Renderer.textSize.Y));
 	}
 	
 	protected override AABB updateBox(Renderer ren){
-		Vector2 fsize = size - new Vector2(question.Length * Renderer.textSize.X + 10f, 0f);
-		
-		Vector2 fpos = pos + new Vector2(question.Length * Renderer.textSize.X + 10f, 0f);		
+		Vector2 fsize = size - new Vector2(qSize + 10f, 0f);
+		Vector2 fpos = pos + new Vector2(qSize + 10f, 0f);
 		
 		return new AABB(fpos.Y, fpos.Y - fsize.Y, fpos.X, fpos.X + fsize.X);
 	}

@@ -7,6 +7,9 @@ using OpenTK.Graphics.OpenGL;
 using OpenTK.Mathematics;
 
 class Camera{
+	#if DEBUG_LEVELS
+		public static float zoomD = 18.4f;
+	#endif
 	
 	Renderer ren;
 	
@@ -63,10 +66,10 @@ class Camera{
 	}
 	
 	public void updateSize(int w, int h){
-		#if DEBUG_ZOOM
-		zoom = h / 100f;
+		#if DEBUG_LEVELS
+			zoom = h / zoomD;
 		#else
-		zoom = h / 18.4f;
+			zoom = h / 18.4f;
 		#endif
 		
 		scale = Matrix4.CreateScale(zoom);

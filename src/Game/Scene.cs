@@ -5,14 +5,12 @@ using OpenTK.Mathematics;
 using AshLib;
 using AshLib.Time;
 
-class Scene{	
+class Scene : IDisposable{	
 	static Shader tileShader;
 	static Texture2D tileTexture;
 	static Texture2D tileAltTexture;
 	
 	static SoundPool bellSound;
-	
-	static readonly Vector2i tileSpriteNum = new Vector2i(16, 2);
 	
 	public static void initialize(){
 		tileShader = Shader.fromAssembly("shaders.tile");
@@ -28,6 +26,7 @@ class Scene{
 	public Camera cam{get; private set;}
 	public SoundManager sm{get; private set;}
 	public ParticleRenderer pr{get; private set;}
+	public ParticleRenderer voidpr{get; private set;}
 	
 	public int levelNum{get; private set;} = -1; //bc it will increase
 	bool altTiles;
@@ -52,6 +51,8 @@ class Scene{
 	//General animations
 	public Animation idleAnimation{get; private set;}
 	public Animation runningAnimation{get; private set;}
+	public Animation coinAnimation{get; private set;}
+	public Animation frogAnimation{get; private set;}
 	
 	//Tiles
 	public int[] tiles{get; private set;}
@@ -63,6 +64,10 @@ class Scene{
 	public bool[] globalTransitable{get; private set;}
 	
 	Mesh tilesMesh;
+	
+	//Void particles counter
+	double voidTime;
+	const double voidTimeMax = 0.1f;
 	
 	public bool canMovePlayer => (!doingSmoothing) && (!doingDescent);
 	
@@ -90,6 +95,7 @@ class Scene{
 			"Pathfinding old",  //6
 			"Pathfinding new",  //7
 			"Skelly mfollow",  //8
+			"Frog",  //9
 		};
 		
 		public static readonly TimeTool tt = new TimeTool(categories);
@@ -101,6 +107,7 @@ class Scene{
 		cam = ren.cam;
 		sm = s;
 		pr = new ParticleRenderer();
+		voidpr = new ParticleRenderer();
 		
 		cam.onViewChange += setView;
 		
@@ -117,6 +124,7 @@ class Scene{
 		
 		idleAnimation = new Animation(2, 0, 0.3d);
 		runningAnimation = new Animation(2, 2, 0.1d);
+		coinAnimation = new Animation(8, 0, 0.1d);
 		
 		entitiesToRemove = new List<Entity>();
 		entitiesToAdd = new List<Entity>();
@@ -132,7 +140,7 @@ class Scene{
 	
 	void newLevel(){
 		//Play bell
-		sm.playAbs(bellSound.get(rand), 1f);
+		sm.playNonPositional(bellSound.get(rand), 1f);
 		
 		//Increment level
 		levelNum++;
@@ -167,7 +175,7 @@ class Scene{
 		transitable = tiles.Select(n => Tile.transitables.Contains(n)).ToArray();
 		
 		//Tile mesh
-		tilesMesh = createTilesMesh(tiles, mapXsize, mapYsize, rand);
+		tilesMesh = Tile.createTilesMesh(tiles, mapXsize, mapYsize, rand);
 		
 		//Setup global map
 		globalTransitable = (bool[]) transitable.Clone();
@@ -356,8 +364,6 @@ class Scene{
 		int x = (int) (cam.mouseWorldPos.X + 0.5d);
 		int y = (int) cam.mouseWorldPos.Y;
 		
-		Entity r = null;
-		
 		foreach(Entity e in entities){
 			if(e != p && e.position == new Vector2i(x, y) && e.onClick(this)){
 				playerDidAction = true;
@@ -365,6 +371,30 @@ class Scene{
 			}
 		}
 	}
+	
+	public bool interact(){
+		if(!canMovePlayer){
+			return false;
+		}
+		
+		foreach(Entity e in entities){
+			if(e != p && e.onClick(this)){
+				playerDidAction = true;
+				return true;
+			}
+		}
+		
+		return false;
+	}
+	
+	#if DEBUG_LEVELS
+		public void skipLevel(){
+			if(!doingDescent){
+				doingDescent = true;
+				descentTime = 0d;	
+			}
+		}
+	#endif
 	
 	public void draw(Renderer ren){
 		//Add entities
@@ -395,9 +425,17 @@ class Scene{
 		//Update smooth
 		if(doingSmoothing){
 			smoothTime += Dungeon.dh.deltaTime;
+			
+			if(frogAnimation == null){
+				frogAnimation = new Animation(2, 2, smoothTimeMax/2f);
+			}
+			frogAnimation.tick(Dungeon.dh.deltaTime);
+			
 			if(smoothTime > smoothTimeMax){
 				doingSmoothing = false;
 				smoothTime = 0d;
+				
+				frogAnimation = null;
 				
 				foreach(Entity e in entities){
 					e.endSmooth(this);
@@ -417,6 +455,17 @@ class Scene{
 		//Update animations
 		idleAnimation.tick(Dungeon.dh.deltaTime);
 		runningAnimation.tick(Dungeon.dh.deltaTime);
+		coinAnimation.tick(Dungeon.dh.deltaTime);
+		
+		//Add void particles
+		voidTime += Dungeon.dh.deltaTime;
+		if(voidTime > voidTimeMax){
+			voidTime = 0d;
+			voidpr.add(new VoidParticle(p.position + new Vector2((float) getRandom(-16f, 16f), (float) getRandom(-16f, 16f))));
+		}
+		
+		//Render void particles
+		voidpr.draw(ren);
 		
 		//Draw tiles
 		tileShader.use();
@@ -490,9 +539,13 @@ class Scene{
 		tileShader.setMatrix4("view", cam.view);
 	}
 	
+	public double getRandom(double min, double max){
+		return rand.NextDouble() * (max - min) + min;
+	}
+	
 	static List<Entity> sortEntities(List<Entity> l){
 		List<Entity> living = new();
-		List<Entity> items = new();
+		List<Entity> items = new(l.Count);
 		
 		foreach(Entity e in l){
 			if(e is Living){
@@ -506,67 +559,7 @@ class Scene{
 		return items;
 	}
 	
-	static Mesh createTilesMesh(int[] tiles, int x, int y, Random rand){
-		List<float> ver = new();
-		
-		//Prevent weird issues
-		float epsilon = 1e-3f;
-		
-		//vertex positions
-		Vector2[] p = new Vector2[]{
-			new Vector2(0.5f + epsilon, 0.5f + epsilon),
-			new Vector2(-0.5f - epsilon, 0.5f + epsilon),
-			new Vector2(-0.5f - epsilon, -0.5f - epsilon),
-			new Vector2(0.5f + epsilon, 0.5f + epsilon),
-			new Vector2(-0.5f - epsilon, -0.5f - epsilon),
-			new Vector2(0.5f + epsilon, -0.5f - epsilon)
-		};
-		
-		Vector2 invSpNum = new Vector2(1f/tileSpriteNum.X, 1f/tileSpriteNum.Y);
-		
-		Vector2[] r = new Vector2[]{
-			new Vector2(invSpNum.X - epsilon, epsilon), //0
-			new Vector2(epsilon, epsilon), //1
-			new Vector2(epsilon, invSpNum.Y - epsilon), //2
-			new Vector2(invSpNum.X - epsilon, invSpNum.Y - epsilon) //3
-		};
-		
-		for(int i = 0; i < y; i++){
-			for(int j = 0; j < x; j++){
-				int m = tiles[i * x + j];
-				
-				//Air doesnt need anything
-				if(m == 0){
-					continue;
-				}
-				
-				//Handle random rotations, these are indices for r
-				int[] texCorners = Tile.withRandomRotation.Contains(m) ? rand.Next(4) switch{
-					0 => new int[]{0, 1, 2, 0, 2, 3},
-					1 => new int[]{1, 2, 3, 1, 3, 0},
-					2 => new int[]{2, 3, 0, 2, 0, 1},
-					3 => new int[]{3, 0, 1, 3, 1, 2},
-					_ => new int[]{0, 1, 2, 0, 2, 3}
-				} : new int[]{0, 1, 2, 0, 2, 3};
-				
-				m -= 1; //Adjust for texture index, as 0 is air
-				
-				Vector2 textureIndex = new Vector2i(m % tileSpriteNum.X, m / tileSpriteNum.X);
-				textureIndex /= (Vector2) tileSpriteNum;
-				
-				for(int k = 0; k < 6; k++){
-					ver.Add((float) j + p[k].X);
-					ver.Add((float) i + p[k].Y);
-					ver.Add(textureIndex.X + r[texCorners[k]].X);
-					ver.Add(textureIndex.Y + r[texCorners[k]].Y);
-				}
-			}
-		}
-		
-		return new Mesh("22", ver.ToArray(), PrimitiveType.Triangles, "tiles");
-	}
-	
-	public void endLife(){
+	public void Dispose(){
 		cam.onViewChange -= setView;
 	}
 }

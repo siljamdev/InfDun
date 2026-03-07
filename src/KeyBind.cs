@@ -2,16 +2,38 @@ using System;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.GraphicsLibraryFramework;
+using AshLib;
+using AshLib.AshFiles;
 
 using Keys = OpenTK.Windowing.GraphicsLibraryFramework.Keys;
 
 class KeyBind{
-	bool sticky;
+	#region static
+	public static readonly List<KeyBind> configurables = new();
 	
+	public static AshFileModel getModel(){
+		return new AshFileModel(configurables.Select(k => new ModelInstance(ModelInstanceOperation.Type, k.configKey, (int) k.key)).ToArray());
+	}
+	
+	public static AshFileModel getSaveModel(){
+		return new AshFileModel(configurables.Select(k => new ModelInstance(ModelInstanceOperation.Value, k.configKey, (int) k.key)).ToArray());
+	}
+	
+	public static AshFileModel getResetModel(){
+		return new AshFileModel(configurables.Select(k => new ModelInstance(ModelInstanceOperation.Value, k.configKey, (int) k.ogKey)).ToArray());
+	}
+	#endregion
+	
+	bool sticky;
 	bool usesModifier;
 	
 	public Keys key{get; set;}
 	Keys modifier;
+	
+	//Fields for config
+	Keys ogKey;
+	public string configKey{get; private set;}
+	public string configDescription{get; private set;}
 	
 	public KeyBind(Keys k, bool s = false){
 		key = k;
@@ -23,6 +45,14 @@ class KeyBind{
 		modifier = m;
 		sticky = s;
 		usesModifier = true;
+	}
+	
+	public KeyBind addToConfigurables(string key, string description){
+		configurables.Add(this);
+		ogKey = this.key;
+		configKey = key;
+		configDescription = description;
+		return this;
 	}
 	
 	public bool isActive(KeyboardState kbd){
@@ -64,41 +94,5 @@ class KeyBind{
 				return 0;
 			}
 		}
-	}
-	
-	public static bool getHexTyping(string s){
-		for(int i = 0; i < s.Length; i++){
-			if(!Uri.IsHexDigit(s[i])){
-				return false;
-			}
-		}
-		return true;
-	}
-	
-	public static bool getFloatPositiveTyping(string s){
-		for(int i = 0; i < s.Length; i++){
-			if(!(char.IsDigit(s[i]) || s[i] == '.')){
-				return false;
-			}
-		}
-		return true;
-	}
-	
-	public static bool getFloatTyping(string s){
-		for(int i = 0; i < s.Length; i++){
-			if(!(char.IsDigit(s[i]) || s[i] == '.' || s[i] == '-')){
-				return false;
-			}
-		}
-		return true;
-	}
-	
-	public static bool getIntTyping(string s){
-		for(int i = 0; i < s.Length; i++){
-			if(!char.IsDigit(s[i])){
-				return false;
-			}
-		}
-		return true;
 	}
 }

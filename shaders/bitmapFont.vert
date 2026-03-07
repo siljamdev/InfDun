@@ -13,7 +13,7 @@ uniform int letters[256];
 
 void main()
 {
-	vec2 inGlyphCoords = vec2(aPos.x, - aPos.y); //Sum in y because vertices are from -1 to 0. Ranges from 0 to 1
+	vec2 inGlyphCoords = vec2(aPos.x, -aPos.y); //Reverse in y because vertices are from -1 to 0. Ranges from 0 to 1
 	
 	//Get the index in x and y instead of linear. Also the y component is swapped because in opengl textures start in the bottom left corner instead of the top left one
 	vec2 letterIndex = vec2(float(letters[gl_InstanceID] % glyphStructure.x), float(letters[gl_InstanceID] / glyphStructure.x));

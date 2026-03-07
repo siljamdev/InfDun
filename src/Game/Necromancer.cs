@@ -29,11 +29,12 @@ class Necromancer : Living{
 	const int maxDistSq = 16*16;
 	const int wanderDistSq = 48*48;
 	
-	const int minionCounterMax = 7;
+	//const int minionCounterMax = 7;
 	
 	protected override int atlasColumn => 5;
 	
-	int minionCounter;
+	//Turn counter to spawn minion
+	//int minionCounter;
 	List<Living> minions = new();
 	
 	double time;
@@ -50,6 +51,8 @@ class Necromancer : Living{
 		facingLeft = rand.Next(2) == 0;
 		
 		health = 4;
+		
+		maxTime = getRandom(rand, 7d, 30d);
 	}
 	
 	public override void newLevel(Scene sce){
@@ -122,22 +125,22 @@ class Necromancer : Living{
 		}
 		
 		//Invoke new minion
-		if(minionCounter > minionCounterMax && minions.Count < minionLimit){
-			minionCounter = 0;
-			
-			state = EntityState.action;
-			
-			addSkeleton(sce, findPosition(sce));
-			
-			#if DEBUG_TIME
-				Scene.tt.CategoryEnd(cat);
-			#endif
-			return true;
-		}else if(minions.Count < minionLimit){
-			minionCounter++;
-		}else{
-			minionCounter = 0;
-		}
+		//if(minionCounter > minionCounterMax && minions.Count < minionLimit){
+		//	minionCounter = 0;
+		//	
+		//	state = EntityState.action;
+		//	
+		//	addSkeleton(sce, findPosition(sce));
+		//	
+		//	#if DEBUG_TIME
+		//		Scene.tt.CategoryEnd(cat);
+		//	#endif
+		//	return true;
+		//}else if(minions.Count < minionLimit){
+		//	minionCounter++;
+		//}else{
+		//	minionCounter = 0;
+		//}
 		
 		//Pathfind
 		if(target != null){
@@ -211,7 +214,7 @@ class Necromancer : Living{
 	}
 	
 	public void addSkeleton(Scene sce, Vector2i pos, bool? lef = null){
-		if(minions.Count > minionLimit){
+		if(minions.Count >= minionLimit){
 			return;
 		}
 		
@@ -294,13 +297,13 @@ class Necromancer : Living{
 	}
 	
 	//Finding a suitable position for skellys to spawn
-	public Vector2i findPosition(Scene sce){
-		Vector2i[] possible = offsets.Select(n => n + position).Where(n => sce.isAvailableToMove(n)).ToArray();
-		
-		if(possible.Length == 0){
-			return position;
-		}
-		
-		return possible[sce.rand.Next(possible.Length)];
-	}
+	//public Vector2i findPosition(Scene sce){
+	//	Vector2i[] possible = offsets.Select(n => n + position).Where(n => sce.isAvailableToMove(n)).ToArray();
+	//	
+	//	if(possible.Length == 0){
+	//		return position;
+	//	}
+	//	
+	//	return possible[sce.rand.Next(possible.Length)];
+	//}
 }

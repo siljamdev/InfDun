@@ -8,6 +8,9 @@ using OpenTK.Mathematics;
 using AshLib;
 
 class Renderer{
+	#region static
+	static readonly Color4 backgroundColor = new Color4(0f, 0f, 0f, 1f);
+	
 	public static readonly Vector2 textSize = new Vector2(15f, 18f);
 	public static readonly Vector2 middleTextSize = new Vector2(22f, 28f);
 	public static readonly Vector2 bigTextSize = new Vector2(28f, 35f);
@@ -19,77 +22,80 @@ class Renderer{
 	public static readonly Color3 selectedTextColor = new Color3("FFFF8F");
 	public static readonly Color3 titleTextColor = new Color3("DFDFFF");
 	public static readonly Color3 fieldTextColor = new Color3("D6D6D6");
+	public static readonly Color3 redTextColor = new Color3("FF8888");
+	
 	public static readonly Color3 buttonColor = new Color3("555577");
 	public static readonly Color3 greenButtonColor = new Color3("557755");
 	public static readonly Color3 redButtonColor = new Color3("775555");
-	public static readonly Color3 redTextColor = new Color3("FF8888");
 	public static readonly Color3 fieldColor = new Color3("222222");
 	public static readonly Color3 fieldSelectedColor = new Color3("505050");
 	
 	public static readonly Color3 black = Color3.Black;
+	#endregion
 	
 	public int width{get; private set;}
 	public int height{get; private set;}
-	
-	Color4 backgroundColor = new Color4(0, 0, 0, 1);
 	
 	public Camera cam{get; private set;}
 	public FontRenderer fr{get; private set;}
 	public ParticleRenderer uipr{get; private set;} //UI particle renderer
 	
-	Dictionary<string, Texture2D> uiTexturesBook;
-
 	public Mesh uiMesh{get; private set;}
-	Mesh menuMesh;
 	
-	Shader uiShader;
+	public Shader uiShader{get; private set;}
 	public Shader rectShader{get; private set;}
-	Shader menuShader;
 	
-	Texture2D back;
-	Texture2D back2;
+	MainMenuRenderer mmren;
 	
-	Texture2D clock;
-	Matrix4 clockLeft = Matrix4.CreateScale(new Vector3(45f, 45f, 0f)) * Matrix4.CreateTranslation(new Vector3(-22.5f, 22.5f, 0f));
-	Matrix4 clockRight;
+	public Matrix4 projection{get; private set;}
+	
+	public UiScreen overlayScreen;
+	public UiScreen currentScreen;
 	
 	public Dungeon dun;
+	
+	Dictionary<string, Texture2D> uiTexturesBook = new();
+	
+	public Stack<UiScreen> screens{get; private set;}
 	
 	Stopwatch sw;
 	string corner;
 	Color3 cornerColor;
 	
-	public Matrix4 projection{get; private set;}
+	Texture2D clock;
+	Matrix4 clockLeft = Matrix4.CreateScale(new Vector3(45f, 45f, 0f)) * Matrix4.CreateTranslation(new Vector3(-22.5f, 22.5f, 0f));
+	Matrix4 clockRight;
+	
+	public bool showClock;
+	
+	float ramMB = 0f;
+	float ramUpdateCounter = 0f;
 	
 	bool advancedMode;
 	
-	public UiScreen overlayScreen;
-	public UiScreen currentScreen;
-	
+	//Used to animate death
 	public float screenAlpha = 0.6f;
-	
-	public Stack<UiScreen> screens{get; private set;}
 	
 	public Renderer(Dungeon st){
 		dun = st;
-		sw = new Stopwatch();
 		
-		width = 640;
-		height = 480;
-		
-		clockRight = Matrix4.CreateTranslation(new Vector3(22.5f, -22.5f, 0f)) * Matrix4.CreateTranslation(new Vector3(-width/2f, -height/2f + 45f, 0f));
-		
-		screens = new Stack<UiScreen>();
+		width = st.ClientSize.X;
+		height = st.ClientSize.Y;
 		
 		//Enable transparency (blending)
 		GL.Enable(EnableCap.Blend);
 		GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
 		
 		//other utilities
-		
 		cam = new Camera(this);
 		cam.onViewChange += AABB.setView;
 		cam.onViewChange += LineStrip.setView;
+		
+		sw = new Stopwatch();
+		
+		clockRight = Matrix4.CreateTranslation(new Vector3(22.5f, -22.5f, 0f)) * Matrix4.CreateTranslation(new Vector3(-width/2f, -height/2f + 45f, 0f));
+		
+		screens = new Stack<UiScreen>();
 		
 		float[] vertices = { //y is in -1 so starting pos of the text is in the left upper corner
 			1f, -1f,
@@ -102,45 +108,32 @@ class Renderer{
 		
 		uiMesh = new Mesh("2", vertices, PrimitiveType.Triangles, "ui");
 		
-		float[] v2 = { //Just the full screen will be
-			-1f, -1f,
-			-1f, 1f,
-			1f, -1f,
-			1f,  1f,
-			1f, -1f,
-			-1f, 1f
-		};
-		
-		menuMesh = new Mesh("2", v2, PrimitiveType.Triangles, "menu");
-		
-		uiTexturesBook = new Dictionary<string, Texture2D>();
 		uiShader = Shader.fromAssembly("shaders.ui");
 		rectShader = Shader.fromAssembly("shaders.rect");
-		menuShader = Shader.fromAssembly("shaders.menu");
-		menuShader.setInt("tex2", 1);
 		
-		fr = new FontRenderer(uiMesh, Texture2D.fromAssembly("res.textures.font.png", TextureParams.Default), 16, 16);
+		mmren = new MainMenuRenderer();
+		
+		//Bitmap font
+		fr = new BitmapFontRenderer(uiMesh, Texture2D.fromAssembly("res.textures.font.png", TextureParams.Default), 16, 16);
 		
 		uipr = new ParticleRenderer();
 		
-		//load textures
-		addTexture("tick", Texture2D.fromAssembly("res.textures.tick.png", TextureParams.Default));
-		addTexture("screenshot", Texture2D.fromAssembly("res.textures.screenshotButton.png", TextureParams.Default));
-		addTexture("next", Texture2D.fromAssembly("res.textures.nextButton.png", TextureParams.Default));
-		addTexture("previous", Texture2D.fromAssembly("res.textures.previousButton.png", TextureParams.Default));
+		//load ui textures
+		addTexture("tick", Texture2D.fromAssembly("res.textures.ui.tick.png", TextureParams.Default));
+		addTexture("screenshot", Texture2D.fromAssembly("res.textures.ui.screenshotIcon.png", TextureParams.Default));
+		addTexture("next", Texture2D.fromAssembly("res.textures.ui.nextIcon.png", TextureParams.Default));
+		addTexture("previous", Texture2D.fromAssembly("res.textures.ui.previousIcon.png", TextureParams.Default));
 		addTexture("icon", Texture2D.fromAssembly("res.icon.png", TextureParams.Default));
-		addTexture("info", Texture2D.fromAssembly("res.textures.infoIcon.png", TextureParams.Default));
-		addTexture("help", Texture2D.fromAssembly("res.textures.helpIcon.png", TextureParams.Default));
+		addTexture("info", Texture2D.fromAssembly("res.textures.ui.infoIcon.png", TextureParams.Default));
+		addTexture("help", Texture2D.fromAssembly("res.textures.ui.helpIcon.png", TextureParams.Default));
+		addTexture("file", Texture2D.fromAssembly("res.textures.ui.fileIcon.png", TextureParams.Default));
 		
-		addTexture("heart", Texture2D.fromAssembly("res.textures.heart.png", TextureParams.Default));
+		addTexture("heart", Texture2D.fromAssembly("res.textures.ui.heart.png", TextureParams.Default));
 		
-		back = Texture2D.fromAssembly("res.textures.back.png", TextureParams.Default);
-		back2 = Texture2D.fromAssembly("res.textures.back2.png", TextureParams.Default, 1);
-		
-		clock = Texture2D.fromAssembly("res.textures.clock.png", TextureParams.Default);
+		clock = Texture2D.fromAssembly("res.textures.ui.clock.png", TextureParams.Default);
 		
 		overlayScreen = new UiScreen(
-			new UiImage(Placement.TopLeft, 0f, 0f, 40, 40, "heart", new Color3("AA0000"))
+			new UiImage(Placement.TopLeft, 0f, 0f, 40, 40, "heart").setColor(new Color3("AA0000"))
 		);
 		
 		overlayScreen.updateProj(this);
@@ -148,7 +141,7 @@ class Renderer{
 	
 	public void setScreen(UiScreen s){
 		if(currentScreen != null){
-			currentScreen.closeAction?.Invoke();
+			currentScreen.close(this);
 			screens.Push(currentScreen);
 		}
 		
@@ -166,10 +159,12 @@ class Renderer{
 		}
 		
 		if(screens.Count == 0){
+			currentScreen?.close(this);
 			currentScreen = null;
 			return;
 		}
 		
+		currentScreen?.close(this);
 		currentScreen = screens.Pop();
 		currentScreen?.updateProj(this);
 	}
@@ -197,7 +192,8 @@ class Renderer{
 		
 		uiShader.setMatrix4("projection", projection);
 		rectShader.setMatrix4("projection", projection);
-		menuShader.setVector2("iResolution", new Vector2(width, height));
+		
+		mmren.updateSize(w, h);
 		
 		cam.updateSize(width, height);
 		
@@ -207,12 +203,12 @@ class Renderer{
 		LineStrip.setProjection(projection);
 		
 		overlayScreen.updateProj(this);
-		
 		currentScreen?.updateProj(this);
 		
 		clockRight = Matrix4.CreateTranslation(new Vector3(22.5f, -22.5f, 0f)) * Matrix4.CreateTranslation(new Vector3(-width/2f, -height/2f + 45f, 0f));
 	}
 	
+	//Helper method
 	public void addTexture(string n, Texture2D t){
 		uiTexturesBook.Add(n, t);
 	}
@@ -227,6 +223,7 @@ class Renderer{
 		}
 	}
 	
+	//Solid rect
 	public void drawRect(Vector2 pos, Vector2 sca, Color3 col, float alpha = 1f){
 		Matrix4 model = Matrix4.CreateScale(new Vector3(sca.X, sca.Y, 0f)) * Matrix4.CreateTranslation(new Vector3(pos.X, pos.Y, 0f));
 		
@@ -266,7 +263,7 @@ class Renderer{
 		drawTexture(n, new Vector2(xpos, ypos), new Vector2(sca, sca), col, alpha);
 	}
 	
-	public void drawClock(){
+	void drawClock(){
 		Matrix4 rot = Matrix4.CreateRotationZ(MathHelper.DegreesToRadians((float) (360d * dun.sce.smoothTime / dun.sce.smoothTimeMax)));
 		
 		Matrix4 model = clockLeft * rot * clockRight;
@@ -280,51 +277,23 @@ class Renderer{
 		uiMesh.draw();
 	}
 	
+	//General draw loop
 	public void draw(){
+		cam.startFrame();
+		
 		GL.ClearColor(backgroundColor);
 		GL.Clear(ClearBufferMask.ColorBufferBit);
 		
-		cam.startFrame();
-		
-		//Render scene or bg
+		//Render scene or main menu background
 		if(dun.sce != null){
 			dun.sce.draw(this);
 		}else{
-			menuShader.use();
-			menuShader.setFloat("iTime", (float) Dungeon.dh.GetTime());
-			
-			back.bind();
-			back2.bind();
-			
-			menuMesh.draw();
+			mmren.draw();
 		}
 		
-		if(advancedMode){
-			string s = "FPS: " + Dungeon.dh.stableFps.ToString("F0");
-			fr.drawText(s, width/2f - s.Length * textSize.X, (height/2f), textSize, textColor);
-			
-			string format = "F1";
-			
-			s = "(" + (-cam.position.X).ToString(format) + ", " + (-cam.position.Y).ToString(format) + ")";
-			fr.drawText(s, width/2f - s.Length * textSize.X, (height/2f) - textSize.Y, textSize, textColor);
-			
-			s = "Cursor: " + cam.mouseWorldPos.ToString(format);
-			fr.drawText(s, width/2f - s.Length * textSize.X, (height/2f) - 2f * textSize.Y, textSize, textColor);
-		}
-		
-		if(corner != null){
-			if(sw.Elapsed.TotalSeconds < 4d){
-				fr.drawText(corner, -width/2f, height/2f - 40f, textSize, cornerColor);
-			}else if(sw.Elapsed.TotalSeconds < 6d){
-				fr.drawText(corner, -width/2f, height/2f - 40f, textSize, cornerColor, (float) (6d - sw.Elapsed.TotalSeconds));
-			}else{
-				corner = null;
-				sw.Stop();
-			}
-		}
-		
+		//Render ui
 		if(dun.sce != null){
-			if(dun.sce.doingSmoothing){
+			if(dun.sce.doingSmoothing && showClock){
 				drawClock();
 			}
 			
@@ -339,6 +308,42 @@ class Renderer{
 		}else{			
 			currentScreen?.draw(this, true);
 		}
+		
 		uipr.draw(this); //Render particles
+		
+		//Render corner info
+		if(corner != null){
+			if(sw.Elapsed.TotalSeconds < 4d){
+				fr.drawText(corner, -width/2f, height/2f - 40f, textSize, cornerColor);
+			}else if(sw.Elapsed.TotalSeconds < 6d){
+				fr.drawText(corner, -width/2f, height/2f - 40f, textSize, cornerColor, (float) (6d - sw.Elapsed.TotalSeconds));
+			}else{
+				corner = null;
+				sw.Stop();
+			}
+		}
+		
+		//Render advanced info
+		if(advancedMode){
+			string s = "FPS: " + Dungeon.dh.stableFps.ToString("F0");
+			fr.drawText(s, width/2f, height/2f, textSize, Placement.TopRight, textColor);
+			
+			ramUpdateCounter += (float) Dungeon.dh.deltaTime;
+			if(ramUpdateCounter > 1f){
+				ramUpdateCounter = 0f;
+				ramMB = Process.GetCurrentProcess().PrivateMemorySize64 / (1024f * 1024f);
+			}
+			
+			s = "Memory: " + ramMB.ToString("F2") + " MB";
+			fr.drawText(s, width/2f, (height/2f) - textSize.Y, textSize, Placement.TopRight, textColor);
+			
+			string format = "F1";
+			
+			s = "Pos: (" + (-cam.position.X).ToString(format) + ", " + (-cam.position.Y).ToString(format) + ")";
+			fr.drawText(s, width/2f, (height/2f) - 2f * textSize.Y, textSize, Placement.TopRight, textColor);
+			
+			s = "Cursor: " + cam.mouseWorldPos.ToString(format);
+			fr.drawText(s, width/2f, (height/2f) - 3f * textSize.Y, textSize, Placement.TopRight, textColor);
+		}
 	}
 }

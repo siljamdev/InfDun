@@ -1,30 +1,33 @@
 using System;
+using System.Text;
 using OpenTK;
 using OpenTK.Mathematics;
 using AshLib;
 
 class UiLog : UiElement{
-	public string[] text;
+	public string[] text {get; private init;}
 	
-	//on top
-	float offset;
+	string[][] lines;
+	
+	float topMargin;
+	Vector2 margin; //Lateral margin
 	
 	float scrollOffset;
 	
-	//Lateral space
-	Vector2 margin;
-	
-	float ysize;
-	
 	public Color3 color;
 	
-	public UiLog(float lm, float rm, float oy, Color3 c, params string[] t) : base(Placement.TopLeft, lm, oy){
+	public UiLog(float lm, float rm, float tm, params string[] t) : base(Placement.TopLeft, lm, tm){
 		text = t;
 		
 		margin = new Vector2(lm, rm);
-		offset = oy;
+		topMargin = tm;
 		
+		color = Renderer.textColor;
+	}
+	
+	public UiLog setColor(Color3 c){
 		color = c;
+		return this;
 	}
 	
 	public bool scroll(float f){
@@ -32,7 +35,7 @@ class UiLog : UiElement{
 		if(scrollOffset <= 0f && f < 0f){
 			return false;
 		}
-		if(scrollOffset > ysize && f > 0f){
+		if(scrollOffset > size.Y && f > 0f){
 			return false;
 		}
 		
@@ -41,97 +44,97 @@ class UiLog : UiElement{
 	}
 	
 	public override void draw(Renderer ren, Vector2d m){
-		float d = offset;
+		float d = pos.Y + scrollOffset; //Y pos
 		
-		int maxChars = (int) ((ren.width - margin.X - margin.Y) / Renderer.textSize.X);
+		float maxXsize = ren.width - margin.X - margin.Y;
 		
-		for(int i = 0; i < text.Length; i++){
-			string[] lines = divideLines(text[i], maxChars);
-			for(int j = 0; j < lines.Length; j++){
-				ren.fr.drawText(lines[j], -ren.width / 2f + margin.X, ren.height / 2f - d + scrollOffset, Renderer.textSize, color);
-				d += Renderer.textSize.Y;
+		for(int i = 0; i < lines.Length; i++){
+			for(int j = 0; j < lines[i].Length; j++){
+				ren.fr.drawText(lines[i][j], pos.X, d, Renderer.textSize, color);
+				d -= Renderer.textSize.Y;
 			}
-			d += Renderer.fieldSeparation - Renderer.textSize.Y;
+			d -= Renderer.fieldSeparation - Renderer.textSize.Y;
 		}
 	}
 	
-	public override void drawHover(Renderer ren, Vector2d m){
+	protected override Vector2 updateSize(Renderer ren){
+		lines = new string[text.Length][];
 		
-	}
-	
-	protected override Vector2 updatePos(Renderer ren){
 		scrollOffset = 0f;
-		float d = 0f; //Size
+		float ySize = 0f;
 		
-		int maxChars = (int) ((ren.width - margin.X - margin.Y) / Renderer.textSize.X);
+		float maxXsize = ren.width - margin.X - margin.Y;
 		
 		for(int i = 0; i < text.Length; i++){
-			string[] lines = divideLines(text[i], maxChars);
-			for(int j = 0; j < lines.Length; j++){
-				d += Renderer.textSize.Y;
-			}
-			d += Renderer.fieldSeparation - Renderer.textSize.Y;
+			string[] l = divideLines(ren, text[i], maxXsize);
+			lines[i] = l;
+			ySize += Renderer.textSize.Y * l.Length;
+			ySize += Renderer.fieldSeparation - Renderer.textSize.Y;
 		}
-		ysize = d;
 		
-		return Vector2.Zero;
+		return new Vector2(maxXsize, ySize);
 	}
 	
-	protected override AABB updateBox(Renderer ren){
-		return null;
+	string[] divideLines(Renderer ren, string input, float maxXsize){
+		List<string> lines = new List<string>();
+		string[] words = input.Split(' ');
+		StringBuilder currentLine = new();
+		float currentLineXsize = 0f;
+		
+		float spaceXsize = ren.fr.getXadvance(' ', Renderer.textSize);
+		
+		foreach(string word in words){
+			float wordXsize = ren.fr.getXsize(word, Renderer.textSize);
+			
+			float extra = currentLine.Length > 0 ? spaceXsize : 0f; //For the space
+			
+			if(wordXsize > maxXsize){
+				if(currentLine.Length > 0){
+					lines.Add(currentLine.ToString());
+					currentLine.Clear();
+					currentLineXsize = 0f;
+				}
+				
+				for(int i = 0; i < word.Length; i++){
+					float charXsize = ren.fr.getXadvance(word[i], Renderer.textSize);
+					
+					if(currentLineXsize != 0f && currentLineXsize + charXsize > maxXsize){
+						lines.Add(currentLine.ToString());
+						currentLine.Clear();
+						currentLineXsize = charXsize;
+						
+						currentLine.Append(word[i]);
+					}else{
+						currentLine.Append(word[i]);
+						currentLineXsize += charXsize;
+					}
+				}
+			}else if(currentLineXsize + wordXsize + extra <= maxXsize){
+				if(currentLine.Length > 0){
+					currentLine.Append(" ");
+					currentLineXsize += spaceXsize;
+				}
+				
+				currentLine.Append(word);
+				currentLineXsize += wordXsize;
+			}else{
+				//Start a new line if the word doesn't fit
+				if(currentLine.Length > 0){
+					lines.Add(currentLine.ToString());
+					currentLine.Clear();
+					currentLineXsize = 0f;
+				}
+				
+				currentLine.Append(word);
+				currentLineXsize += wordXsize;
+			}
+		}
+		
+		//Add the last line if not empty
+		if(currentLine.Length > 0){
+			lines.Add(currentLine.ToString());
+		}
+		
+		return lines.ToArray();
 	}
-	
-	static string[] divideLines(string input, int maxCharsPerLine){
-        if (maxCharsPerLine <= 0)
-            throw new ArgumentException("Max characters per line must be greater than zero.", nameof(maxCharsPerLine));
-
-        List<string> lines = new List<string>();
-        string[] words = input.Split(' ');
-        string currentLine = string.Empty;
-
-        foreach (string word in words)
-        {
-            if (word.Length > maxCharsPerLine)
-            {
-                // Break up long words if they exceed maxCharsPerLine
-                if (currentLine.Length > 0)
-                {
-                    lines.Add(currentLine);
-                    currentLine = string.Empty;
-                }
-
-                for (int i = 0; i < word.Length; i += maxCharsPerLine)
-                {
-                    int length = Math.Min(maxCharsPerLine, word.Length - i);
-                    lines.Add(word.Substring(i, length));
-                }
-            }
-            else if (currentLine.Length + word.Length + 1 <= maxCharsPerLine)
-            {
-                // Add the word to the current line if it fits
-                if (currentLine.Length > 0)
-                {
-                    currentLine += " ";
-                }
-                currentLine += word;
-            }
-            else
-            {
-                // Start a new line if the word doesn't fit
-                if (currentLine.Length > 0)
-                {
-                    lines.Add(currentLine);
-                }
-                currentLine = word;
-            }
-        }
-
-        // Add the last line if not empty
-        if (currentLine.Length > 0)
-        {
-            lines.Add(currentLine);
-        }
-
-        return lines.ToArray();
-    }
 }

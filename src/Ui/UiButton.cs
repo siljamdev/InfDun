@@ -6,38 +6,33 @@ using AshLib;
 class UiButton : UiClickable{
 	public string text{get; private set;}
 	
-	Vector2 size;
-	
-	float xSize;
+	float minXSize;
 	
 	public Color3 textColor;
 	public Color3 hoverTextColor;
 	public Color3 color;
 	public Color3 hoverColor;
 	
-	public string? description{get; private set;}
-	
-	public UiButton(Placement p, float x, float y, float xs, string t, Color3 c, Color3 tc, Color3 hc) : base(p, x, y){
+	public UiButton(Placement p, float x, float y, float xs, string t) : base(p, x, y){
 		text = t;
 		
-		xSize = xs;
+		minXSize = xs;
 		
+		color = Renderer.buttonColor;
+		hoverColor = getHoverColor(color);
+		textColor = Renderer.textColor;
+		hoverTextColor = Renderer.selectedTextColor;
+	}
+	
+	public UiButton setColor(Color3 c){
 		color = c;
-		hoverColor = new Color3((byte) (color.R * 1.2f), (byte) (color.G * 1.2f), color.B);
-		textColor = tc;
-		hoverTextColor = hc;
-		
-		size = new Vector2(text.Length * Renderer.textSize.X + 10f, Renderer.textSize.Y + 10f);
-		size.X = Math.Max(size.X, this.xSize);
+		hoverColor = getHoverColor(color);
+		return this;
 	}
 	
-	public UiButton(Placement p, float x, float y, float xs, string t, Color3 c) : this(p, x, y, xs, t, c, Renderer.textColor, Renderer.selectedTextColor){
-		
-	}
-	
-	public UiButton setDescription(string d){
-		description = d;
-		hasHover = true;
+	public UiButton setTextColor(Color3 t, Color3 ht){
+		textColor = t;
+		hoverTextColor = ht;
 		return this;
 	}
 	
@@ -51,27 +46,15 @@ class UiButton : UiClickable{
 		}
 	}
 	
-	public override void drawHover(Renderer ren, Vector2d mousePos){
-		Vector2 mouse = (Vector2) mousePos;
-		
-		Vector2 size = new Vector2(description.Length * Renderer.textSize.X + 10f, Renderer.textSize.Y + 10f);
-		
-		if(mouse.X + size.X <= ren.width / 2f){
-			ren.drawRect(mouse.X, mouse.Y + Renderer.textSize.Y + 10f, size.X, size.Y, Renderer.black, 0.5f);
-			ren.fr.drawText(description, mouse.X + 5f, mouse.Y + Renderer.textSize.Y + 5f, Renderer.textSize, Renderer.textColor);
-		}else{
-			if((mouse.X + size.X) - (ren.width / 2f) <= (-ren.width / 2f) - (mouse.X - size.X)){
-				ren.drawRect(mouse.X, mouse.Y + Renderer.textSize.Y + 10f, size.X, size.Y, Renderer.black, 0.5f);
-				ren.fr.drawText(description, mouse.X + 5f, mouse.Y + Renderer.textSize.Y + 5f, Renderer.textSize, Renderer.textColor);
-			}else{
-				ren.drawRect(mouse.X - size.X, mouse.Y + Renderer.textSize.Y + 10f, size.X, size.Y, Renderer.black, 0.5f);
-				ren.fr.drawText(description, mouse.X - size.X + 5f, mouse.Y + Renderer.textSize.Y + 5f, Renderer.textSize, Renderer.textColor);
-			}
+	protected override Vector2 updateSize(Renderer ren){
+		if(size != Vector2.Zero){
+			return size;
 		}
-	}
-	
-	protected override Vector2 updatePos(Renderer ren){
-		return base.getPos(ren, size);
+		
+		Vector2 s = new Vector2(ren.fr.getXsize(text, Renderer.textSize) + 10f, Renderer.textSize.Y + 10f);
+		s.X = Math.Max(s.X, this.minXSize);
+		
+		return s;
 	}
 	
 	protected override AABB updateBox(Renderer ren){

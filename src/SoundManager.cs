@@ -17,12 +17,12 @@ class SoundManager : IDisposable{
 	
 	public SoundManager(){
 		device = ALC.OpenDevice(null);
-		if(device.Handle == 0){
+		if(device.Handle == (IntPtr) 0){
 			throw new Exception("Failed to open a OpenAL device. Try changing openal32.dll");
 		}
 		
 		context = ALC.CreateContext(device, new ALContextAttributes());
-		if(context.Handle == 0){
+		if(context.Handle == (IntPtr) 0){
 			throw new Exception("Failed to create a OpenAL context");
 		}
 		
@@ -36,7 +36,7 @@ class SoundManager : IDisposable{
 		
 		setPos(Vector3.Zero);
 		AL.Listener(ALListenerfv.Orientation, new float[]{0f, 0f, -1f, 0f, 1f, 0f});
-		//AL.DistanceModel(ALDistanceModel.LinearDistanceClamped);
+		
 		AL.DistanceModel(ALDistanceModel.InverseDistanceClamped);
 	}
 	
@@ -84,7 +84,7 @@ class SoundManager : IDisposable{
 	}
 	
 	//Always max vol
-	public void playAbs(Sound sound, float gain = 1.0f, float pitch = 1.0f){
+	public void playNonPositional(Sound sound, float gain = 1.0f, float pitch = 1.0f){
 		if(!isActive){
 			return;
 		}
@@ -96,7 +96,7 @@ class SoundManager : IDisposable{
 		}
 		
 		int source = (int) s;
-
+		
 		AL.SourceStop(source);
 		
 		AL.Source(source, ALSourcei.Buffer, sound.id);
@@ -123,7 +123,7 @@ class SoundManager : IDisposable{
 			return null;
 		}
 		
-		// Expand source pool
+		//Expand source pool
 		int s = AL.GenSource();
 		sources.Add(s);
 		return s;

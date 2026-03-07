@@ -12,6 +12,7 @@ abstract class Entity{
 	
 	protected static readonly Matrix4 leftRotation = Matrix4.CreateRotationY(MathHelper.DegreesToRadians(180f));
 	
+	//texture atlas size
 	protected static readonly Vector2i atlasSize = new Vector2i(16, 16);
 	
 	public static void initialize(){
@@ -37,7 +38,7 @@ abstract class Entity{
 		Medkit.initialize();
 		Orb.initialize();
 		Altar.initialize();
-		BefriendingAltar.initialize();
+		//BefriendingAltar.initialize();
 		DripGenerator.initialize();
 	}
 	
@@ -143,7 +144,11 @@ abstract class Entity{
 	}
 	
 	protected static double getRandom(Scene sce, double min, double max){
-		return sce.rand.NextDouble() * (max - min) + min;
+		return sce.getRandom(min, max);
+	}
+	
+	protected static double getRandom(Random rand, double min, double max){
+		return rand.NextDouble() * (max - min) + min;
 	}
 }
 

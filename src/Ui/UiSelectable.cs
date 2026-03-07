@@ -6,11 +6,9 @@ abstract class UiSelectable : UiElement{
 	
 	public bool selected;
 	
-	public UiSelectable(Placement p, Vector2 o) : base(p, o){
-		
-	}
+	public override bool canHaveDescription => true;
 	
-	public UiSelectable(Placement p, float x, float y) : base(p, x, y){
-		
-	}
+	public UiSelectable(Placement p, Vector2 o) : base(p, o){}
+	
+	public UiSelectable(Placement p, float x, float y) : base(p, x, y){}
 }

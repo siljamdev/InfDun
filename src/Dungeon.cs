@@ -2,10 +2,10 @@ using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.IO;
+using System.Collections.Concurrent;
 using OpenTK;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.Common;
-using OpenTK.Graphics.OpenGL;
 using OpenTK.Graphics.OpenGL;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.GraphicsLibraryFramework;
@@ -22,26 +22,28 @@ using Keys = OpenTK.Windowing.GraphicsLibraryFramework.Keys;
 
 partial class Dungeon : GameWindow{
 	
-	public const string version = "0.1.3";
+	public const string version = "0.1.4";
 	
 	#region static
-	public static List<(int, int?, int?)> meshesMarkedForDisposal = new();
-	public static List<int> texturesMarkedForDisposal = new();
+	public static ConcurrentQueue<IDisposable> resourcesMarkedForDisposal = new(); //Need to disposeOfResources of these on the same thread or else a Fatal error will occur
 	
 	public static DeltaHelper dh;
 	
 	static GLFWCallbacks.ErrorCallback GLFWErrorCallback;
 	
 	static void Main(string[] args){
-		if(OperatingSystem.IsWindows()){
+		#if WINDOWS
 			if(GetConsoleWindow() == IntPtr.Zero){
 				AttachConsole(ATTACH_PARENT_PROCESS);
 			}
-		}
+		#endif
 		
 		GLFWErrorCallback = OnGLFWError;
 		
 		GLFWProvider.SetErrorCallback(GLFWErrorCallback);
+		
+		dh = new DeltaHelper();
+		dh.Start();
 		
 		#if DEBUG
 			using(Dungeon dun = new Dungeon(new NativeWindowSettings{
@@ -87,37 +89,44 @@ partial class Dungeon : GameWindow{
 	#endregion
 	#endregion
 	
-	KeyBind fullscreen = new KeyBind(Keys.F11, false);
-	KeyBind screenshot = new KeyBind(Keys.F2, false);
+	KeyBind fullscreen = new KeyBind(Keys.F11, false).addToConfigurables("keybinds.fullscreen", "Toggle fullscreen");
+	KeyBind screenshot = new KeyBind(Keys.F2, false).addToConfigurables("keybinds.screenshot", "Take screenshot");
 	
-	KeyBind advancedMode = new KeyBind(Keys.LeftAlt, false);
+	KeyBind advancedMode = new KeyBind(Keys.LeftAlt, false).addToConfigurables("keybinds.advancedMode", "Toggle advanced mode");
 	
-	KeyBind moveUp = new KeyBind(Keys.W, true);
-	KeyBind moveDown = new KeyBind(Keys.S, true);
-	KeyBind moveLeft = new KeyBind(Keys.A, true);
-	KeyBind moveRight = new KeyBind(Keys.D, true);
+	KeyBind moveUp = new KeyBind(Keys.W, true).addToConfigurables("keybinds.up", "Move up");
+	KeyBind moveDown = new KeyBind(Keys.S, true).addToConfigurables("keybinds.down", "Move down");
+	KeyBind moveLeft = new KeyBind(Keys.A, true).addToConfigurables("keybinds.left", "Move left");
+	KeyBind moveRight = new KeyBind(Keys.D, true).addToConfigurables("keybinds.right", "Move right");
 	
-	//These are static
+	KeyBind interact = new KeyBind(Keys.Space, true).addToConfigurables("keybinds.interact", "Interact");
+	
+	//These dont change and arent configurable
 	KeyBind escape = new KeyBind(Keys.Escape, Keys.LeftShift, false);
 	KeyBind help = new KeyBind(Keys.F1, false);
-	KeyBind logUp = new KeyBind(Keys.Up, true);
-	KeyBind logDown = new KeyBind(Keys.Down, true);
+	KeyBind logUp = new KeyBind(Keys.Up, Keys.LeftShift, true);
+	KeyBind logDown = new KeyBind(Keys.Down, Keys.LeftShift, true);
 	KeyBind enter = new KeyBind(Keys.Enter, true);
 	
 	#if DEBUG_TIME
 		KeyBind debug = new KeyBind(Keys.M, false);
 	#endif
 	
-	public Dependencies dep;
+	#if DEBUG_LEVELS
+		KeyBind skipLevel = new KeyBind(Keys.I, false);
+		KeyBind zoomCamera = new KeyBind(Keys.Z, Keys.LeftShift, false);
+	#endif
+	
+	public Dependencies dep {get; private set;}
 	public AshFile config;
 	
-	bool takeScreenshotNextTick;
-	
 	Renderer ren;
+	public SoundManager sm;
 	
 	public Scene sce;
 	
-	public SoundManager sm;
+	public bool takeScreenshotNextTick;
+	public bool isFullscreened => this.WindowState == WindowState.Fullscreen;
 	
 	public int highscore{
 		get{
@@ -131,10 +140,6 @@ partial class Dungeon : GameWindow{
 		}
 	}
 	
-	bool isFullscreened;
-	
-	float maxFps = 144f;
-	
 	#if DEBUG
 		DebugProc DebugMessageDelegate;
 	#endif
@@ -145,16 +150,8 @@ partial class Dungeon : GameWindow{
 	}
 	
 	void initialize(){
-		dh = new DeltaHelper();
-		dh.Start();
-		
 		string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
 		dep = new Dependencies(appDataPath + "/ashproject/infdun", true, new string[]{"screenshots"}, null);
-		
-		//Before config bc config modifies it
-		sm = new SoundManager();
-		
-		initializeConfig();
 		
 		#if DEBUG
 			DebugMessageDelegate = OnDebugMessage;
@@ -170,11 +167,15 @@ partial class Dungeon : GameWindow{
 		#endif
 		
 		ren = new Renderer(this);
+		sm = new SoundManager();
+		
+		initializeConfig();
 		
 		//Init statics, resources
 		Scene.initialize();
 		AABB.initialize();
 		LineStrip.initialize();
+		UiScreen.initialize();
 		
 		initializeScreens();
 		
@@ -183,36 +184,35 @@ partial class Dungeon : GameWindow{
 		ren.setScreen(mainMenu);
 	}
 	
-	void onResize(int x, int y){
-		GL.Viewport(0, 0, x, y);
-		ren?.updateSize(x, y);
+	//These appear in options
+	public (string key, object value, string description)[] getConfigurableOptions(){
+		return new (string key, object value, string description)[]{
+			("vsync", true, "Vsync"),
+			("maxFps", 144f, "Maximum FPS"),
+			("sound", true, "Sound"),
+			("uiSound", true, "UI Sound"),
+			("particles", true, "Particles"),
+			("clock", true, "Animate turn")
+		};
+	}
+	
+	//These do not appear in options
+	AshFileModel getNonConfigurableConfigModel(){
+		return new AshFileModel(
+			new ModelInstance(ModelInstanceOperation.Type, "highscore", 0)
+		);
 	}
 	
 	void initializeConfig(){
-		int[] k = new List<Keys>{
-			fullscreen.key,
-			screenshot.key,
-			advancedMode.key,
-			moveUp.key,
-			moveDown.key,
-			moveLeft.key,
-			moveRight.key
-		}.Select(n => (int) n).ToArray();
-		
-		AshFileModel afm = new AshFileModel(
-			new ModelInstance(ModelInstanceOperation.Type, "vsync", true),
-			new ModelInstance(ModelInstanceOperation.Type, "maxFps", 144f),
-			new ModelInstance(ModelInstanceOperation.Type, "controls", k),
-			new ModelInstance(ModelInstanceOperation.Type, "sound", true),
-			new ModelInstance(ModelInstanceOperation.Type, "particles", true),
-			new ModelInstance(ModelInstanceOperation.Type, "highscore", 0)
-		);
+		AshFileModel afm = new AshFileModel(getConfigurableOptions().Select(o => new ModelInstance(ModelInstanceOperation.Type, o.key, o.value)).ToArray());
+		afm.Merge(getNonConfigurableConfigModel());
+		afm.Merge(KeyBind.getModel());
 		
 		config = dep.config;
 		
 		afm.deleteNotMentioned = true;
 		
-		config *= afm;
+		config.ApplyModel(afm);
 		
 		//Set current version and path. Might be needed by someone (maybe)
 		config.Set("version", version);
@@ -222,35 +222,70 @@ partial class Dungeon : GameWindow{
 		
 		config.Save();
 		
-		setVsync(config.GetValue<bool>("vsync"));
-		maxFps = config.GetValue<float>("maxFps");
-		this.UpdateFrequency = maxFps;
-		
-		int[] ka = config.GetValue<int[]>("controls");
-		if(ka.Length > 6){
-			fullscreen.key = (Keys)ka[0];
-			screenshot.key = (Keys)ka[1];
-			advancedMode.key = (Keys)ka[2];
-			moveUp.key = (Keys)ka[3];
-			moveDown.key = (Keys)ka[4];
-			moveLeft.key = (Keys)ka[5];
-			moveRight.key = (Keys)ka[6];
-		}
-		
-		sm.isActive = config.GetValue<bool>("sound");
-		ParticleRenderer.isActive = config.GetValue<bool>("particles");
+		loadConfig();
+		loadControls();
 	}
 	
-	public void setVsync(bool b){
-		if(b){
-			VSync = VSyncMode.On;
-		}else{
-			VSync = VSyncMode.Off;
+	public void loadConfig(){
+		setVsync(config.GetValue<bool>("vsync"));
+		this.UpdateFrequency = config.GetValue<float>("maxFps");
+		
+		sm.isActive = config.GetValue<bool>("sound");
+		ParticleRenderer.particlesEnabled = config.GetValue<bool>("particles");
+		
+		UiScreen.uiSounds = config.GetValue<bool>("uiSound");
+		ren.showClock = config.GetValue<bool>("clock");
+	}
+	
+	//Reset the ones that appear in options
+	public void resetConfig(){
+		AshFileModel r = new AshFileModel(getConfigurableOptions().Select(h => new ModelInstance(ModelInstanceOperation.Value, h.key, h.value)).ToArray());
+		config.ApplyModel(r);
+		
+		config.Save();
+		
+		loadConfig();
+		
+		ren.setCornerInfo("Reset config", Renderer.selectedTextColor);
+	}
+	
+	public void loadControls(){
+		foreach(KeyBind k in KeyBind.configurables){
+			if(config.TryGetValue(k.configKey, out int v)){
+				k.key = (Keys) v;
+			}
 		}
+	}
+	
+	public void saveControls(){
+		config.ApplyModel(KeyBind.getSaveModel());
+		
+		config.Save();
+		
+		ren.setCornerInfo("Saved controls", Renderer.selectedTextColor);
+	}
+	
+	public void resetControls(){
+		config.ApplyModel(KeyBind.getResetModel());
+		
+		config.Save();
+		
+		loadControls();
+		
+		ren.setCornerInfo("Reset controls", Renderer.selectedTextColor);
+	}
+	
+	void onResize(int x, int y){
+		GL.Viewport(0, 0, x, y);
+		ren?.updateSize(x, y);
+	}
+	
+	void setVsync(bool b){
+		this.VSync = b ? VSyncMode.On : VSyncMode.Off;
 	}
 	
 	void handleKeyboardInput(){
-		// check to see if the window is focused
+		//check to see if the window is focused
 		if(!IsFocused){
 			sce?.endFrame();
 			ren.cam.endFrame();
@@ -260,6 +295,24 @@ partial class Dungeon : GameWindow{
 		#if DEBUG_TIME
 			if(debug.isActive(KeyboardState)){
 				Console.WriteLine(Scene.tt.MeanString());
+			}
+		#endif
+		
+		#if DEBUG_LEVELS
+			if(skipLevel.isActive(KeyboardState)){
+				sce?.skipLevel();
+			}
+			
+			switch(zoomCamera.isActiveMod(KeyboardState)){
+				case 1:
+				Camera.zoomD += 3f;
+				onResize(ren.width, ren.height);
+				break;
+				
+				case 2:
+				Camera.zoomD -= 3f;
+				onResize(ren.width, ren.height);
+				break;
 			}
 		#endif
 		
@@ -274,7 +327,7 @@ partial class Dungeon : GameWindow{
 			break;
 			
 			case 2:
-			Close();
+			this.Close();
 			break;
 		}
 		
@@ -296,10 +349,27 @@ partial class Dungeon : GameWindow{
 		}
 		
 		if(ren.currentScreen != null){
-			if(logUp.isActive(KeyboardState)){
-				ren.currentScreen.scroll(40f * (float) dh.deltaTime);
-			}else if(logDown.isActive(KeyboardState)){
-				ren.currentScreen.scroll(-40f * (float) dh.deltaTime);
+			switch(logUp.isActiveMod(KeyboardState)){
+				case 1:
+					ren.currentScreen.scroll(-20f * (float) dh.deltaTime);
+					break;
+				
+				case 2:
+					ren.currentScreen.scroll(-60f * (float) dh.deltaTime);
+					break;
+				
+				default:
+					switch(logDown.isActiveMod(KeyboardState)){
+						case 1:
+							ren.currentScreen.scroll(20f * (float) dh.deltaTime);
+							break;
+						
+						case 2:
+							ren.currentScreen.scroll(60f * (float) dh.deltaTime);
+							break;
+					}
+					break;
+				
 			}
 			
 			if(enter.isActive(KeyboardState) && (ren.currentScreen == mainMenu || ren.currentScreen == deathMenu)){
@@ -312,7 +382,9 @@ partial class Dungeon : GameWindow{
 		}
 		
 		if(sce?.canMovePlayer == true){
-			if(moveUp.isActive(KeyboardState) && sce.movePlayerUp()){
+			if(interact.isActive(KeyboardState) && sce.interact()){
+				
+			}else if(moveUp.isActive(KeyboardState) && sce.movePlayerUp()){
 				
 			}else if(moveDown.isActive(KeyboardState) && sce.movePlayerDown()){
 				
@@ -327,14 +399,14 @@ partial class Dungeon : GameWindow{
 		ren.cam.endFrame();
 	}
 	
-	void setNewScene(){
+	public void setNewScene(){
 		sce = new Scene(ren, sm);
 		ren.setScreen(null);
 	}
 	
-	void closeScene(){
+	public void closeScene(){
 		ren.screenAlpha = 0.6f; //Reset
-		sce?.endLife();
+		sce?.Dispose();
 		sce = null;
 		ren.setScreen(null);
 		ren.setScreen(mainMenu);
@@ -343,15 +415,43 @@ partial class Dungeon : GameWindow{
 	void toggleFullscreen(){
 		VSyncMode t = VSync;
 		if(!isFullscreened){
-			MonitorInfo mi = Monitors.GetMonitorFromWindow(this);
-			WindowState = WindowState.Fullscreen;
-			this.CurrentMonitor = mi;
-			isFullscreened = true;
+			//MonitorInfo mi = Monitors.GetMonitorFromWindow(this);
+			this.WindowState = WindowState.Fullscreen;
+			//this.CurrentMonitor = mi;
+			//MakeFullscreen(mi.Handle);
 			VSync = t;
 		}else{
-			WindowState = WindowState.Normal;
-			isFullscreened = false;
+			this.WindowState = WindowState.Normal;
 			VSync = t;
+		}
+	}
+	
+	void captureScreenshot(){
+		int width = ren.width;
+		int height = ren.height;
+		
+		// Create a byte array to hold the pixel data
+		byte[] pixels = new byte[width * height * 3]; // RGBA (4 bytes per pixel)
+		
+		// Read pixels from OpenGL frame buffer
+		GL.ReadBuffer(ReadBufferMode.Front);
+		GL.ReadPixels(0, 0, width, height, OpenTK.Graphics.OpenGL.PixelFormat.Bgr, PixelType.UnsignedByte, pixels);
+		
+		byte[] rgbPixels = new byte[width * height * 3]; // RGB (3 bytes per pixel)
+		
+		// Copy only RGB values
+		for(int i = 0; i < height; i++){
+			for(int j = 0; j < width; j++){
+				rgbPixels[((height - i - 1) * width + j) * 3] = pixels[(i * width + j) *3 + 2];      // Blue
+				rgbPixels[((height - i - 1) * width + j) * 3 + 1] = pixels[(i * width + j) * 3 + 1];  // Green
+				rgbPixels[((height - i - 1) * width + j) * 3 + 2] = pixels[(i * width + j) * 3];  // Red
+			}
+		}
+		
+		// Write PNG using StbImageWriteSharp
+		var writer = new StbImageWriteSharp.ImageWriter();
+		using (var stream = File.OpenWrite(dep.path + "/screenshots/" + DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss") + ".png")){
+			writer.WritePng(rgbPixels, width, height, StbImageWriteSharp.ColorComponents.RedGreenBlue, stream);
 		}
 	}
 	
@@ -385,53 +485,15 @@ partial class Dungeon : GameWindow{
 			string message = Marshal.PtrToStringUTF8(pMessage, length);
 			
 			Console.Error.WriteLine("[OpenGL Error] Severity: " + severity + " Source: " + source + " Type: " + type + " Id: " + id + " Message: " + message);
-			//Console.Error.WriteLine("[{0} source={1} type={2} id={3}] {4}", severity, source, type, id, message);
 			
-			if(ren != null){
-				ren.setCornerInfo("[OpenGL Error] " + source, Renderer.redTextColor);
-			}
+			ren?.setCornerInfo("[GL Error] " + source, Renderer.redTextColor);
 		}
 	#endif
 	#endregion
 	
-	void dispose(){
-		foreach((int VAO, int? VBO, int? EBO) in meshesMarkedForDisposal){		
-			Mesh.cleanup(VAO, VBO, EBO);
-		}
-		meshesMarkedForDisposal.Clear();
-		
-		foreach(int tid in texturesMarkedForDisposal){		
-			Texture2D.cleanup(tid);
-		}
-		texturesMarkedForDisposal.Clear();
-	}
-	
-	void captureScreenshot(){
-		int width = ren.width;
-		int height = ren.height;
-		
-		// Create a byte array to hold the pixel data
-		byte[] pixels = new byte[width * height * 3]; // RGBA (4 bytes per pixel)
-		
-		// Read pixels from OpenGL frame buffer
-		GL.ReadBuffer(ReadBufferMode.Front);
-		GL.ReadPixels(0, 0, width, height, OpenTK.Graphics.OpenGL.PixelFormat.Bgr, PixelType.UnsignedByte, pixels);
-		
-		byte[] rgbPixels = new byte[width * height * 3]; // RGB (3 bytes per pixel)
-		
-		// Copy only RGB values
-		for(int i = 0; i < height; i++){
-			for(int j = 0; j < width; j++){
-				rgbPixels[((height - i - 1) * width + j) * 3] = pixels[(i * width + j) *3 + 2];      // Blue
-				rgbPixels[((height - i - 1) * width + j) * 3 + 1] = pixels[(i * width + j) * 3 + 1];  // Green
-				rgbPixels[((height - i - 1) * width + j) * 3 + 2] = pixels[(i * width + j) * 3];  // Red
-			}
-		}
-		
-		// Write PNG using StbImageWriteSharp
-		var writer = new StbImageWriteSharp.ImageWriter();
-		using (var stream = File.OpenWrite(dep.path + "/screenshots/" + DateTime.Now.ToString("dd-MM-yyyy_HH-mm-ss") + ".png")){
-			writer.WritePng(rgbPixels, width, height, StbImageWriteSharp.ColorComponents.RedGreenBlue, stream);
+	void disposeOfResources(){
+		while(resourcesMarkedForDisposal.TryDequeue(out IDisposable r)){
+			r.Dispose();
 		}
 	}
 	
@@ -462,7 +524,7 @@ partial class Dungeon : GameWindow{
 	}
 	
 	protected override void OnUnload(){
-		dispose();
+		disposeOfResources();
 		base.OnUnload();
 	}
 	
@@ -480,17 +542,14 @@ partial class Dungeon : GameWindow{
 		ren.draw();
 		Context.SwapBuffers();
 		checkErrors();
-		dispose();
+		disposeOfResources();
 		if(takeScreenshotNextTick){
+			takeScreenshotNextTick = false;
 			captureScreenshot();
 			ren.setCornerInfo("Saved screenshot");
-			takeScreenshotNextTick = false;
 		}
 		base.OnRenderFrame(args);
 		dh.Frame();
-		/* if(VSync != VSyncMode.On){
-			dh.Target(maxFps);
-		} */
 	}
 	
 	protected override void OnMouseWheel(MouseWheelEventArgs args){
@@ -524,12 +583,12 @@ partial class Dungeon : GameWindow{
 		base.OnMouseDown(e);
     }
 	
-	#region WINDOWS		
-	[DllImport("kernel32.dll")]
-	static extern bool AttachConsole(int dwProcessId);
-	const int ATTACH_PARENT_PROCESS = -1;
-	
-	[DllImport("kernel32.dll")]
-	static extern IntPtr GetConsoleWindow();
-	#endregion
+	#if WINDOWS		
+		[DllImport("kernel32.dll")]
+		static extern bool AttachConsole(int dwProcessId);
+		const int ATTACH_PARENT_PROCESS = -1;
+		
+		[DllImport("kernel32.dll")]
+		static extern IntPtr GetConsoleWindow();
+	#endif
 }

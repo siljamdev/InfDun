@@ -6,7 +6,6 @@ using OpenTK.Mathematics;
 class Coin : Entity{
 	static Sound coinSound;
 	
-	Animation idleAnimation = new Animation(8, 0, 0.1d);
 	Animation dissapearAnimation;
 	
 	protected override int atlasColumn => 8;
@@ -40,8 +39,6 @@ class Coin : Entity{
 	public override void draw(Scene sce){
 		base.draw(sce);
 		
-		idleAnimation.tick(Dungeon.dh.deltaTime);
-		
 		if(dissapearAnimation != null){
 			dissapearAnimation.tick(Dungeon.dh.deltaTime);
 			if(dissapearAnimation.frame > 0){
@@ -55,6 +52,6 @@ class Coin : Entity{
 	}
 	
 	public override int getAnimationFrame(Scene sce){
-		return idleAnimation.frame;
+		return sce.coinAnimation.frame;
 	}
 }

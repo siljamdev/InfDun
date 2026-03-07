@@ -21,6 +21,7 @@
     <OutputType>Exe</OutputType>
 	
 	<DefineConstants>$(DefineConstants);DEBUG_TIME</DefineConstants>
+	<DefineConstants>$(DefineConstants);DEBUG_LEVELS</DefineConstants>
   </PropertyGroup>
   
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
@@ -31,19 +32,80 @@
 	<EmbeddedResource Include="res/**" />
 	<EmbeddedResource Include="shaders/*" />
 	
-    <PackageReference Include="AshLib" Version="3.4.0" />
+    <PackageReference Include="AshLib" Version="3.5.2" />
     <PackageReference Include="OpenTK" Version="4.9.4" />
     <PackageReference Include="StbImageSharp" Version="2.30.15" />
     <PackageReference Include="StbImageWriteSharp" Version="1.16.7" />
     <PackageReference Include="StbVorbisSharp" Version="1.22.4" />
   </ItemGroup>
   
-  <ItemGroup Condition="('$(Configuration)' == 'Debug' and '$(OS)' == 'Windows_NT') or '$(RuntimeIdentifier)' == 'win-x64' or '$(RuntimeIdentifier)' == 'win-x86' or '$(RuntimeIdentifier)' == 'win-arm64'">
-	<None Update="lib/openal32.dll">
+  <!-- Windows -->
+  <PropertyGroup Condition="('$(Configuration)' == 'Debug' and '$(OS)' == 'Windows_NT') or '$(RuntimeIdentifier)' == 'win-x64' or '$(RuntimeIdentifier)' == 'win-x86' or '$(RuntimeIdentifier)' == 'win-arm' or '$(RuntimeIdentifier)' == 'win-arm64'">
+	<DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
+  </PropertyGroup>
+  
+  <!-- Linux -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'linux-x86' or '$(RuntimeIdentifier)' == 'linux-x64' or '$(RuntimeIdentifier)' == 'linux-arm' or '$(RuntimeIdentifier)' == 'linux-arm64'">
+	<DefineConstants>$(DefineConstants);LINUX</DefineConstants>
+  </PropertyGroup>
+  
+  <!-- MacOS -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' == 'osx-x64' or '$(RuntimeIdentifier)' == 'osx-arm64'">
+	<DefineConstants>$(DefineConstants);MACOS</DefineConstants>
+  </PropertyGroup>
+  
+  <!-- Windows -->
+  <ItemGroup Condition="('$(Configuration)' == 'Debug' and '$(OS)' == 'Windows_NT') or '$(RuntimeIdentifier)' == 'win-x64' or '$(RuntimeIdentifier)' == 'win-x86' or '$(RuntimeIdentifier)' == 'win-arm' or '$(RuntimeIdentifier)' == 'win-arm64'">
+	<None Update="lib/windows/*.dll">
 		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		<Link>%(Filename)%(Extension)</Link>
 		<TargetPath>%(Filename)%(Extension)</TargetPath>
 	</None>
+  </ItemGroup>
+  
+  <!-- Linux -->
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-x86'">
+    <None Update="lib/linux/x86/*.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>%(Filename)%(Extension)</Link>
+      <TargetPath>%(Filename)%(Extension)</TargetPath>
+    </None>
+  </ItemGroup>
+  
+  <!-- Linux -->
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-x64'">
+    <None Update="lib/linux/x86_64/*.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>%(Filename)%(Extension)</Link>
+      <TargetPath>%(Filename)%(Extension)</TargetPath>
+    </None>
+  </ItemGroup>
+  
+  <!-- Linux -->
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-arm'">
+    <None Update="lib/linux/armhf/*.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>%(Filename)%(Extension)</Link>
+      <TargetPath>%(Filename)%(Extension)</TargetPath>
+    </None>
+  </ItemGroup>
+  
+  <!-- Linux -->
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'linux-arm64'">
+    <None Update="lib/linux/aarch64/*.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>%(Filename)%(Extension)</Link>
+      <TargetPath>%(Filename)%(Extension)</TargetPath>
+    </None>
+  </ItemGroup>
+  
+  <!-- MacOS -->
+  <ItemGroup Condition="'$(RuntimeIdentifier)' == 'osx-x64' or '$(RuntimeIdentifier)' == 'osx-arm64'">
+    <None Update="lib/macos/*.dylib">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>%(Filename)%(Extension)</Link>
+      <TargetPath>%(Filename)%(Extension)</TargetPath>
+    </None>
   </ItemGroup>
   
 </Project>

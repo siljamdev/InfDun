@@ -6,8 +6,8 @@ using OpenTK.Mathematics;
 class BefriendingAltar : Entity{
 	static Sound altarSound;
 	
-	public static void initialize(){
-		altarSound = Sound.monoFromAssembly("res.sounds.altar.ogg");
+	public static void initialize(Sound s){
+		altarSound = s;
 	}
 	
 	protected override int atlasColumn => 12;
@@ -45,6 +45,11 @@ class BefriendingAltar : Entity{
 		int c = sce.rand.Next(5) + 3;
 		for(int i = 0; i < c; i++){
 			sce.pr.add(new FriendParticle(position + new Vector2d(0d, 0.5d)));
+		}
+		
+		c = sce.rand.Next(5) + 3;
+		for(int i = 0; i < c; i++){
+			sce.pr.add(new FriendParticle(sce.p.position + new Vector2d(0d, 0.5d)));
 		}
 		
 		return true;

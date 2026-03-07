@@ -6,7 +6,21 @@ using AshLib;
 
 using Keys = OpenTK.Windowing.GraphicsLibraryFramework.Keys;
 
-class UiScreen{	
+class UiScreen{
+	#region static
+	static SoundPool clickSound;
+	//static SoundPool closeSound;
+	
+	static Random rand = new();
+	
+	public static bool uiSounds;
+	
+	public static void initialize(){
+		clickSound = new SoundPool(Sound.monoFromAssembly("res.sounds.ui.click0.ogg"), Sound.monoFromAssembly("res.sounds.ui.click1.ogg"));
+		//closeSound = new SoundPool(Sound.monoFromAssembly("res.sounds.ui.close.ogg"));
+	}
+	#endregion
+	
 	public List<UiElement> elements{get; private set;}
 	
 	public UiSelectable selected;
@@ -17,7 +31,7 @@ class UiScreen{
 	UiLog? scrollLog;
 	
 	public UiScreen(params UiElement[] b){
-		elements = new List<UiElement>();
+		elements = new List<UiElement>(b.Length);
 		
 		elements.AddRange(b);
 	}
@@ -27,21 +41,17 @@ class UiScreen{
 		return this;
 	}
 	
-	public UiScreen setScrollingLog(UiLog g){
+	public UiScreen addScrollingLog(UiLog g){
 		elements.Add(g);
 		scrollLog = g;
 		return this;
 	}
 	
 	public bool scroll(float f){
-		if(scrollLog != null){
-			return scrollLog.scroll(f);
-		}
-		
-		return false;
+		return scrollLog?.scroll(f) ?? false;
 	}
 	
-	public UiScreen setErrorText(UiText t){
+	public UiScreen addErrorText(UiText t){
 		elements.Add(t);
 		errorText = t;
 		return this;
@@ -56,18 +66,19 @@ class UiScreen{
 		mouse.Y = -mouse.Y;
 		
 		foreach(UiElement b in elements){
-			if(b.active){
-				if(b.needGen){
-					b.update(ren);
-				}
-				b.draw(ren, mouse);
+			if(b.needsToUpdate){
+				b.update(ren);
+			}
+			if(b.isActive){
+				b.drawScissored(ren, mouse);
 			}
 		}
 		
 		if(doHover){
 			foreach(UiElement b in elements){
-				if(b.active && b.hasHover && b.box != null && b.box % mouse){
+				if(b.isActive && b.box != null && b.box % mouse){
 					b.drawHover(ren, mouse);
+					break;
 				}
 			}
 		}
@@ -80,7 +91,7 @@ class UiScreen{
 		//Last ones are rendered on top
 		for(int i = elements.Count - 1; i >= 0; i--){
 			UiElement b = elements[i];
-			if(b.active && b.box != null && b.box % mouse){
+			if(b.isActive && b.box != null && b.box % mouse){
 				if(b is UiSelectable s){
 					if(selected != null){
 						selected.selected = false;
@@ -107,6 +118,9 @@ class UiScreen{
 				ren.uipr.add(new MouseParticle(mouse));
 				ren.uipr.add(new MouseParticle(mouse));
 				ren.uipr.add(new MouseParticle(mouse));
+				if(uiSounds){
+					ren.dun.sm.playNonPositional(clickSound.get(rand), 0.5f, 0.8f + (float)rand.NextDouble() * 0.1f);
+				}
 				return true;
 			}
 		}
@@ -121,6 +135,9 @@ class UiScreen{
 	
 	public bool trySetKeybind(Keys k){
 		if(selected is UiKeyField kf){
+			selected.selected = false;
+			selected = null;
+			
 			kf.key.key = k;
 			return true;
 		}
@@ -142,6 +159,19 @@ class UiScreen{
 		}
 		
 		return false;
+	}
+	
+	public void close(Renderer ren){
+		if(selected != null){
+			selected.selected = false;
+			selected = null;
+		}
+		
+		if(uiSounds){
+			//ren.dun.sm.playNonPositional(closeSound.get(rand), 0.5f, 0.8f + (float)rand.NextDouble() * 0.1f);
+		}
+		
+		closeAction?.Invoke();
 	}
 	
 	public void updateProj(Renderer ren){

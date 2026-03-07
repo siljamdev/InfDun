@@ -1,0 +1,119 @@
+using System;
+using OpenTK;
+using OpenTK.Graphics.OpenGL;
+using OpenTK.Mathematics;
+
+class Frog : Living{
+	static Sound hurtSound;
+	static Sound deathSound;
+	static SoundPool ambientSound;
+	
+	public static void initialize(){
+		hurtSound = Sound.monoFromAssembly("res.sounds.froghurt.ogg");
+		deathSound = Sound.monoFromAssembly("res.sounds.frogdeath.ogg");
+		ambientSound = new SoundPool(Sound.monoFromAssembly("res.sounds.frogsnd0.ogg"), Sound.monoFromAssembly("res.sounds.frogsnd1.ogg"));
+	}
+	
+	protected override int atlasColumn => 14;
+	
+	double time;
+	double maxTime;
+	
+	#if DEBUG_TIME
+		const int cat = 9;
+	#endif
+	
+	public Frog(Vector2i p, Random rand) : base(p){
+		facingLeft = rand.Next(2) == 0;
+		
+		health = 1;
+		
+		maxTime = getRandom(rand, 6d, 25d);
+	}
+	
+	public override bool doTurn(Scene sce){
+		//Do nothing
+		if(sce.rand.Next(2) == 0){
+			#if DEBUG_TIME
+				Scene.tt.CategoryEnd(cat);
+			#endif
+			return false;
+		}
+		
+		//Move
+		Vector2i jumpTarget = position + new Vector2i(sce.rand.Next(-1, 2), sce.rand.Next(-1, 2));
+		if(tryMove(jumpTarget, sce)){
+			#if DEBUG_TIME
+				Scene.tt.CategoryEnd(cat);
+			#endif
+			return true;
+		}
+		
+		#if DEBUG_TIME
+			Scene.tt.CategoryEnd(cat);
+		#endif
+		return false;
+	}
+	
+	protected override void onDeath(Scene sce, Living s){
+		sce.sm.play(deathSound, new Vector3(position.X, position.Y, 0f), 0.4f, 0.6f + (float)sce.rand.NextDouble() * 0.6f);
+		
+		if(s == sce.p){
+			sce.p.score -= 10;
+		}
+	}
+	
+	protected override void onMove(Scene sce){ //No step sound
+		
+	}
+	
+	protected override void onHurt(Scene sce, Living s){
+		sce.sm.play(hurtSound, new Vector3(position.X, position.Y, 0f), 0.8f, 0.7f + (float)sce.rand.NextDouble() * 0.5f);
+	}
+	
+	protected override void onAttack(Scene sce, Living s){
+		int c = sce.rand.Next(5) + 2;
+		for(int i = 0; i < c; i++){
+			sce.pr.add(new FrogBloodParticle(sce, this));
+		}
+	}
+	
+	//public override void endSmooth(Scene sce){	
+	//	if(state == EntityState.moving){
+	//		int c = sce.rand.Next(4) + 3;
+	//		for(int i = 0; i < c; i++){
+	//			sce.pr.add(new SplashParticle(position - new Vector2(0f, 0.0f)));
+	//		}
+	//	}
+	//	
+	//	base.endSmooth(sce);
+	//}
+	
+	public override void draw(Scene sce){
+		base.draw(sce);
+		
+		time += Dungeon.dh.deltaTime;
+		
+		if(time > maxTime){
+			time = 0d;
+			
+			sce.sm.play(ambientSound.get(sce.rand), new Vector3(position.X, position.Y, 0f), 0.4f, 0.8f + (float)sce.rand.NextDouble() * 0.5f, 6f);
+			
+			maxTime = getRandom(sce, 6d, 25d);
+		}
+	}
+	
+	public override int getAnimationFrame(Scene sce){
+		if(isDying){
+			return 4;
+		}
+		
+		if(state == EntityState.idle){
+			return sce.idleAnimation.frame;
+		}else if(state == EntityState.moving){
+			return sce.frogAnimation?.frame ?? 2;
+		}
+		
+		return 0;
+	}
+}

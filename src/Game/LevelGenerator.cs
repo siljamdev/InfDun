@@ -63,12 +63,14 @@ class LevelGenerator{
 				continue;
 			}
 			
+			//carve
 			for(int x2 = newRoom.X; x2 < newRoom.X + newRoom.W; x2++){
 				for(int y2 = newRoom.Y; y2 < newRoom.Y + newRoom.H; y2++){
 					tiles[y2, x2] = true;
 				}
 			}
 			
+			//connect
 			if(rooms.Count > 0){
 				int connections = Math.Min(rooms.Count, 1 + rand.Next(2));
 				for(int k = 0; k < connections; k++){
@@ -170,6 +172,10 @@ class LevelGenerator{
 	void populateRoom(Room r){
 		switch(roomPopulator.get(rand)){
 			case 0: //Empty
+			int c2 = 1 + rand.Next(4);
+			for(int i = 0; i < c2; i++){
+				entities.Add(new Frog(getAvailablePos(r), rand));
+			}
 			break;
 			
 			case 1: //Goblin
@@ -374,6 +380,15 @@ class LevelGenerator{
 			return Tile.Floor;
 		}
 		
+		int getWallTile(){
+			if(rand.Next(24) == 0){
+				return Tile.TorchWall;
+			}else if(wetFloor && rand.Next(12) == 0){
+				return Tile.MossyWall;
+			}
+			return Tile.Wall;
+		}
+		
 		for(int i = 0; i < m.GetLength(1); i++){
 			for(int j = 0; j < m.GetLength(0); j++){
 				if(get(i, j)){
@@ -385,7 +400,7 @@ class LevelGenerator{
 						w[j, i] = getFloorTile();
 					}
 				}else if(get(i, j-1)){
-					w[j, i] = rand.Next(24) == 0 ? 16 : 3;
+					w[j, i] = getWallTile();
 				}else if(get(i+1, j-1) && get(i-1, j-1)){
 					if(get(i, j+1)){
 						w[j, i] = 11;

@@ -7,36 +7,29 @@ using OpenTK.Graphics.OpenGL;
 using OpenTK.Mathematics;
 using AshLib;
 
-class FontRenderer{	
+class BitmapFontRenderer : FontRenderer{
+	const int maxChars = 256;
+	
+	const string defaultMap = "ABCDEFGHIJKLMNOPQRSTUVWXYZ .,:+-*/\\'\"$()[]^?!%~º1234567890 |□#<>abcdefghijklmnopqrstuvwxyz ;&@`_{}Ññ=€¿¡";
+	
 	char[] map;
 	string mapRaw;
 	
 	int unfoundSymbolPos;
 	
-	Texture2D font;
-	
 	int glyphRows; //Rows of the font texture
 	int glyphColumns; //columns of the font texture
 	
-	Mesh fontMesh;
-	
-	Shader fontShader;
-	
-	public FontRenderer(Mesh m, Texture2D t, int row, int col, string r = "ABCDEFGHIJKLMNOPQRSTUVWXYZ .,:+-*/\\'\"$()[]^?!%~º1234567890 |□#<>abcdefghijklmnopqrstuvwxyz ;&@`_{}Ññ=€¿¡"){
+	public BitmapFontRenderer(Mesh m, Texture2D t, int row, int col, string r = defaultMap)
+		:base(m, t){
 		glyphRows = row;
 		glyphColumns = col;
-		font = t;
 		mapRaw = r;
 		generateMap();
-		fontMesh = m;
 		
-		fontShader = Shader.fromAssembly("shaders.font");
+		fontShader = Shader.fromAssembly("shaders.bitmapFont");
 		
 		fontShader.setVector2i("glyphStructure", new Vector2i(this.glyphRows, this.glyphColumns)); //Pass the number of rows and cols
-	}
-	
-	public void setProjection(Matrix4 m){
-		fontShader.setMatrix4("projection", m);
 	}
 	
 	void generateMap(){
@@ -50,6 +43,7 @@ class FontRenderer{
 	}
 	
 	public int[] textToMap(string text){
+		text = text.Length <= maxChars ? text : text.Substring(0, maxChars);
 		int[] l = new int[text.Length];
 		char[] c = text.ToCharArray();
 		
@@ -67,8 +61,20 @@ class FontRenderer{
 		return l;
 	}
 	
-	public void drawText(string text, Vector2 pos, Vector2 sca, Color3 col, float alpha = 1f){
+	public override float getXadvance(char c, Vector2 sca){
+		return sca.Y;
+	}
+	
+	public override float getXsize(string text, Vector2 sca){
+		return Math.Min(text.Length, maxChars) * sca.X;
+	}
+	
+	public override void drawText(string text, Vector2 pos, Vector2 sca, Placement p, Color3 col, float alpha = 1f){
 		int[] l = textToMap(text);
+		
+		float totalSize = l.Length * sca.X;
+		
+		pos = getPos(pos, sca.Y, totalSize, p);
 		
 		fontShader.use();
 		fontShader.setIntArray("letters[0]", l); //Set the letters so it knows wich glyphs to actually choose
@@ -79,17 +85,5 @@ class FontRenderer{
 		font.bind();
 		
 		fontMesh.drawInstanced(l.Length);
-	}
-	
-	public void drawText(string text, float xpos, float ypos, float xsca, float ysca, Color3 col, float alpha = 1f){
-		drawText(text, new Vector2(xpos, ypos), new Vector2(xsca, ysca), col, alpha);
-	}
-	
-	public void drawText(string text, float xpos, float ypos, float sca, Color3 col, float alpha = 1f){
-		drawText(text, new Vector2(xpos, ypos), new Vector2(sca, sca), col, alpha);
-	}
-	
-	public void drawText(string text, float xpos, float ypos, Vector2 sca, Color3 col, float alpha = 1f){
-		drawText(text, new Vector2(xpos, ypos), sca, col, alpha);
 	}
 }
