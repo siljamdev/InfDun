@@ -30,6 +30,8 @@ class Renderer{
 	public static readonly Color3 fieldColor = new Color3("222222");
 	public static readonly Color3 fieldSelectedColor = new Color3("505050");
 	
+	public static readonly Color3 highscoreColor = new Color3("FFFF70");
+	
 	public static readonly Color3 black = Color3.Black;
 	#endregion
 	
@@ -49,7 +51,6 @@ class Renderer{
 	
 	public Matrix4 projection{get; private set;}
 	
-	public UiScreen overlayScreen;
 	public UiScreen currentScreen;
 	
 	public Dungeon dun;
@@ -129,14 +130,9 @@ class Renderer{
 		addTexture("file", Texture2D.fromAssembly("res.textures.ui.fileIcon.png", TextureParams.Default));
 		
 		addTexture("heart", Texture2D.fromAssembly("res.textures.ui.heart.png", TextureParams.Default));
+		addTexture("key", Texture2D.fromAssembly("res.textures.ui.key.png", TextureParams.Default));
 		
 		clock = Texture2D.fromAssembly("res.textures.ui.clock.png", TextureParams.Default);
-		
-		overlayScreen = new UiScreen(
-			new UiImage(Placement.TopLeft, 0f, 0f, 40, 40, "heart").setColor(new Color3("AA0000"))
-		);
-		
-		overlayScreen.updateProj(this);
 	}
 	
 	public void setScreen(UiScreen s){
@@ -202,7 +198,6 @@ class Renderer{
 		AABB.setProjection(projection);
 		LineStrip.setProjection(projection);
 		
-		overlayScreen.updateProj(this);
 		currentScreen?.updateProj(this);
 		
 		clockRight = Matrix4.CreateTranslation(new Vector3(22.5f, -22.5f, 0f)) * Matrix4.CreateTranslation(new Vector3(-width/2f, -height/2f + 45f, 0f));
@@ -297,13 +292,9 @@ class Renderer{
 				drawClock();
 			}
 			
-			if(currentScreen != null){
-				overlayScreen.draw(this, false);
-				
+			if(currentScreen != null){				
 				drawRect(-width/2f, height/2f, width, height, Color3.Black, screenAlpha);
 				currentScreen.draw(this, true);
-			}else{
-				overlayScreen.draw(this, true);
 			}
 		}else{			
 			currentScreen?.draw(this, true);

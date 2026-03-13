@@ -8,7 +8,7 @@ class Coin : Entity{
 	
 	Animation dissapearAnimation;
 	
-	protected override int atlasColumn => 8;
+	protected override int atlasRow => 8;
 	
 	public static void initialize(){
 		coinSound = Sound.monoFromAssembly("res.sounds.coin.ogg");
@@ -25,9 +25,12 @@ class Coin : Entity{
 		if(distance(sce.p) > 1.5f){
 			return false;
 		}
+		if(sce.p.isDying){
+			return false;
+		}
 		sce.p.score += 5;
 		
-		sce.sm.play(coinSound, new Vector3(position.X, position.Y, 0f), 1f, 0.6f + (float)sce.rand.NextDouble() * 0.7f);
+		sce.sm.play(coinSound, new Vector3(position.X, position.Y, 0f), 1f, 0.6f + (float)sce.randCasual.NextDouble() * 0.7f);
 		
 		dissapearAnimation = new Animation(16, 0, 0.15d);
 		

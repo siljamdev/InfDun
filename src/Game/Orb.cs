@@ -12,7 +12,7 @@ class Orb : Entity{
 		orbSound = Sound.monoFromAssembly("res.sounds.orb.ogg");
 	}
 	
-	protected override int atlasColumn => 10;
+	protected override int atlasRow => 10;
 	
 	public Orb(Vector2i p) : base(p){
 		doCollision = false;
@@ -30,9 +30,9 @@ class Orb : Entity{
 		}
 		sce.p.maxHealth += 1;
 		
-		sce.sm.play(orbSound, new Vector3(position.X, position.Y, 0f), 3f, 0.8f + (float)sce.rand.NextDouble() * 0.5f);
+		sce.sm.play(orbSound, new Vector3(position.X, position.Y, 0f), 3f, 0.8f + (float)sce.randCasual.NextDouble() * 0.5f);
 		
-		int c = sce.rand.Next(5) + 3;
+		int c = sce.randCasual.Next(5) + 3;
 		for(int i = 0; i < c; i++){
 			sce.pr.add(new AltarParticle(sce.p.position + new Vector2d(0d, 0.5d)));
 		}

@@ -8,7 +8,7 @@ class Goblin : Living{
 	const int wanderDistSq = 48*48;
 	
 	int _c;
-	protected override int atlasColumn => _c;
+	protected override int atlasRow => _c;
 	
 	//Only one of these will be non null at a time
 	Living target = null;
@@ -26,7 +26,7 @@ class Goblin : Living{
 	
 	public override void newLevel(Scene sce){
 		//Set target
-		if(sce.rand.Next(10) == 0){
+		if(sce.randSerious.Next(10) == 0){
 			setTar(sce);
 		}else if(target == null){
 			setPosTar(sce);
@@ -52,7 +52,7 @@ class Goblin : Living{
 		}
 		
 		//Do nothing
-		if(sce.rand.Next(2) == 0){
+		if(sce.randSerious.Next(2) == 0){
 			#if DEBUG_TIME
 				Scene.tt.CategoryEnd(cat);
 			#endif
@@ -95,7 +95,7 @@ class Goblin : Living{
 		}
 		
 		//Set target
-		if(sce.rand.Next(10) == 0){
+		if(sce.randSerious.Next(10) == 0){
 			setTar(sce);
 		}else if(target == null){
 			setPosTar(sce);
@@ -108,26 +108,26 @@ class Goblin : Living{
 	}
 	
 	void setTar(Scene sce){
-		Entity[] possible = sce.entities.Where(n => (n != this && n is Living)).Where(n => n.distanceSquared(position) < maxDistSq).ToArray();
+		Entity[] possible = sce.entitiesLiving.Where(n => (n != this && n is Living)).Where(n => n.distanceSquared(position) < maxDistSq).ToArray();
 		
 		if(possible.Length == 0){
 			target = null;
 			return;
 		}
 		
-		Living x2 = possible[sce.rand.Next(possible.Length)] as Living;
+		Living x2 = possible[sce.randSerious.Next(possible.Length)] as Living;
 		
 		target = x2;
 		setPosTarget(sce, null);
 	}
 	
 	void setPosTar(Scene sce){
-		int[] posibleTiles = sce.transitable.Select((v, i) => (v, i)).Where(n => n.Item1).Select(n => n.Item2).
-		Where(n => this.distanceSquared(new Vector2i(n % sce.mapXsize, n / sce.mapXsize)) < wanderDistSq).ToArray();
+		int[] posibleTiles = sce.transitableTiles.Select((v, i) => (v, i)).Where(n => n.Item1).Select(n => n.Item2).
+		Where(n => this.distanceSquared(sce.coordinatesOfFlatIndex(n)) < wanderDistSq).ToArray();
 		
-		int x2 = posibleTiles[sce.rand.Next(posibleTiles.Length)];
+		int x2 = posibleTiles[sce.randSerious.Next(posibleTiles.Length)];
 		
-		setPosTarget(sce, new Vector2i(x2 % sce.mapXsize, x2 / sce.mapXsize));
+		setPosTarget(sce, sce.coordinatesOfFlatIndex(x2));
 		target = null;
 	}
 	
@@ -136,7 +136,7 @@ class Goblin : Living{
 		sce.entitiesToRemove.Add(this);
 		sce.entitiesToAdd.Add(new GoblinFriend(position, _c, facingLeft, health, sce));
 		
-		int c = sce.rand.Next(5) + 3;
+		int c = sce.randCasual.Next(5) + 3;
 		for(int i = 0; i < c; i++){
 			sce.pr.add(new FriendParticle(position + new Vector2d(0d, 0.5d)));
 		}

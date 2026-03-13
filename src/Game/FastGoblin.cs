@@ -7,7 +7,7 @@ class FastGoblin : Living{
 	const int maxDistSq = 16*16;
 	const int wanderDistSq = 48*48;
 	
-	protected override int atlasColumn => 3;
+	protected override int atlasRow => 3;
 	
 	Living target = null;
 	//Vector2i? posTarget = null;
@@ -96,26 +96,26 @@ class FastGoblin : Living{
 	}
 	
 	void setTar(Scene sce){
-		Entity[] possible = sce.entities.Where(n => (n != this && n is Player)).Where(n => n.distanceSquared(position) < maxDistSq).ToArray();
+		Entity[] possible = sce.entitiesLiving.Where(n => (n != this && n is Player)).Where(n => n.distanceSquared(position) < maxDistSq).ToArray();
 		
 		if(possible.Length == 0){
 			target = null;
 			return;
 		}
 		
-		Living x2 = possible[sce.rand.Next(possible.Length)] as Living;
+		Living x2 = possible[sce.randSerious.Next(possible.Length)] as Living;
 		
 		target = x2;
 		setPosTarget(sce, null);
 	}
 	
 	void setPosTar(Scene sce){
-		int[] posibleTiles = sce.transitable.Select((v, i) => (v, i)).Where(n => n.Item1).Select(n => n.Item2).
-		Where(n => this.distanceSquared(new Vector2i(n % sce.mapXsize, n / sce.mapXsize)) < wanderDistSq).ToArray();
+		int[] posibleTiles = sce.transitableTiles.Select((v, i) => (v, i)).Where(n => n.Item1).Select(n => n.Item2).
+		Where(n => this.distanceSquared(sce.coordinatesOfFlatIndex(n)) < wanderDistSq).ToArray();
 		
-		int x2 = posibleTiles[sce.rand.Next(posibleTiles.Length)];
+		int x2 = posibleTiles[sce.randSerious.Next(posibleTiles.Length)];
 		
-		setPosTarget(sce, new Vector2i(x2 % sce.mapXsize, x2 / sce.mapXsize));
+		setPosTarget(sce, sce.coordinatesOfFlatIndex(x2));
 		target = null;
 	}
 	

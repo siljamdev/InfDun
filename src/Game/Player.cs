@@ -11,12 +11,14 @@ class Player : Living{
 		loseSound = Sound.monoFromAssembly("res.sounds.lose.ogg");
 	}
 	
-	protected override int atlasColumn => 0;
+	protected override int atlasRow => 0;
 	
 	public int score;
+	public bool hasKey;
 	
 	List<GoblinFriend> friends = new();
 	
+	//Blood particles
 	double time;
 	double maxTime;
 	
@@ -33,9 +35,14 @@ class Player : Living{
 		
 		facingLeft = true; //Stairs sprite faces left
 		
+		if(friends.Count > 0){
+			cure(1); //Compensate for the lost friends
+		}
 		friends.Clear();
 		
 		cure(1);
+		
+		hasKey = false;
 	}
 	
 	public bool tryMovePlayer(Vector2i? p, Scene sce){
@@ -80,11 +87,11 @@ class Player : Living{
 	}
 	
 	protected override void onMove(Scene sce){
-		sce.sm.playNonPositional(stepSound.get(sce.rand), 0.5f, 0.8f + (float)sce.rand.NextDouble() * 0.4f);
+		sce.sm.playNonPositional(stepSound.get(sce.randCasual), 0.5f, 0.8f + (float)sce.randCasual.NextDouble() * 0.4f);
 	}
 	
 	protected override void onHurt(Scene sce, Living s){
-		sce.sm.playNonPositional(hurtSound, 1f, 0.6f + (float)sce.rand.NextDouble() * 0.7f);
+		sce.sm.playNonPositional(hurtSound, 1f, 0.6f + (float)sce.randCasual.NextDouble() * 0.7f);
 		
 		foreach(GoblinFriend f in friends){
 			f.target = s;
@@ -104,7 +111,7 @@ class Player : Living{
 		
 		entityShader.use();
 		entityShader.setMatrix4("model", model);
-		entityShader.setVector2i("sprite", new Vector2i(getAnimationFrame(sce), atlasColumn));
+		entityShader.setVector2i("sprite", new Vector2i(getAnimationFrame(sce), atlasRow));
 		entityShader.setBool("isHurt", getHurt());
 		entityShader.setFloat("alpha", 1f);
 		
@@ -128,7 +135,7 @@ class Player : Living{
 				
 				sce.pr.add(new BloodParticle(sce, this));
 				
-				maxTime = getRandom(sce, 0.3d, 1d);
+				maxTime = getRandomCasual(sce, 0.3d, 1d);
 			}
 		}
 	}

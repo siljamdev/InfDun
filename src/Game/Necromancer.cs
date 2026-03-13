@@ -9,11 +9,12 @@ class Necromancer : Living{
 	static Sound magicSound;
 	static Sound whisperSound;
 	
+	//Possible skeletons relative positions
 	static readonly Vector2i[] offsets = new Vector2i[]{
 		new Vector2i(-2, -2), new Vector2i(-1, -2), new Vector2i(0, -2), new Vector2i(1, -2), new Vector2i(2, -2),
-		new Vector2i(-2, -1), new Vector2i(-1, -1), new Vector2i(0, -1), new Vector2i(1, -1), new Vector2i(2, -1),
-		new Vector2i(-2,  0), new Vector2i(-1,  0),                      new Vector2i(1,  0), new Vector2i(2,  0),
-		new Vector2i(-2,  1), new Vector2i(-1,  1), new Vector2i(0,  1), new Vector2i(1,  1), new Vector2i(2,  1),
+		new Vector2i(-2, -1),                                                                 new Vector2i(2, -1),
+		new Vector2i(-2,  0),                                                                 new Vector2i(2,  0),
+		new Vector2i(-2,  1),                                                                 new Vector2i(2,  1),
 		new Vector2i(-2,  2), new Vector2i(-1,  2), new Vector2i(0,  2), new Vector2i(1,  2), new Vector2i(2,  2)
 	};
 	
@@ -31,7 +32,7 @@ class Necromancer : Living{
 	
 	//const int minionCounterMax = 7;
 	
-	protected override int atlasColumn => 5;
+	protected override int atlasRow => 5;
 	
 	//Turn counter to spawn minion
 	//int minionCounter;
@@ -52,7 +53,8 @@ class Necromancer : Living{
 		
 		health = 4;
 		
-		maxTime = getRandom(rand, 7d, 30d);
+		time = 0d;
+		maxTime = getRandom(rand, 1d, 30d);
 	}
 	
 	public override void newLevel(Scene sce){
@@ -61,10 +63,6 @@ class Necromancer : Living{
 		if(target == null){
 			setPosTar(sce);
 		}
-		
-		//Sounds
-		time = 0d;
-		maxTime = getRandom(sce, 5d, 15d);
 	}
 	
 	public override bool doTurn(Scene sce){
@@ -106,14 +104,14 @@ class Necromancer : Living{
 			sce.entitiesToAdd.Add(new Magic(position, target));
 			
 			target.damage(1, this, sce);
-			sce.sm.play(magicSound, new Vector3(target.position.X, target.position.Y, 0f), 1f, 0.5f + (float)sce.rand.NextDouble() * 0.8f);
+			sce.sm.play(magicSound, new Vector3(target.position.X, target.position.Y, 0f), 1f, 0.5f + (float)sce.randCasual.NextDouble() * 0.8f);
 			
-			int c = sce.rand.Next(3) + 1;
+			int c = sce.randCasual.Next(3) + 1;
 			for(int i = 0; i < c; i++){
 				sce.pr.add(new MagicParticle(getParticlePos()));
 			}
 			
-			c = sce.rand.Next(3) + 1;
+			c = sce.randCasual.Next(3) + 1;
 			for(int i = 0; i < c; i++){
 				sce.pr.add(new MagicParticle(target.position + new Vector2d(0d, 0.5d)));
 			}
@@ -185,7 +183,7 @@ class Necromancer : Living{
 	}
 	
 	void setTar(Scene sce){
-		Entity[] near = sce.entities.Where(n => n.distanceSquared(position) < maxDistSq).ToArray();
+		Entity[] near = sce.entitiesLiving.Where(n => n.distanceSquared(position) < maxDistSq).ToArray();
 		
 		Entity[] players = near.Where(n => n is Player).ToArray();
 		Entity[] goblins = near.Where(n => n is Goblin || n is FastGoblin || n is GoblinFriend).ToArray();
@@ -197,19 +195,19 @@ class Necromancer : Living{
 			return;
 		}
 		
-		Living x2 = possible[sce.rand.Next(possible.Length)] as Living;
+		Living x2 = possible[sce.randSerious.Next(possible.Length)] as Living;
 		
 		target = x2;
 		setPosTarget(sce, null);
 	}
 	
 	void setPosTar(Scene sce){
-		int[] posibleTiles = sce.transitable.Select((v, i) => (v, i)).Where(n => n.Item1).Select(n => n.Item2).
-		Where(n => this.distanceSquared(new Vector2i(n % sce.mapXsize, n / sce.mapXsize)) < wanderDistSq).ToArray();
+		int[] posibleTiles = sce.transitableTiles.Select((v, i) => (v, i)).Where(n => n.Item1).Select(n => n.Item2).
+		Where(n => this.distanceSquared(sce.coordinatesOfFlatIndex(n)) < wanderDistSq).ToArray();
 		
-		int x2 = posibleTiles[sce.rand.Next(posibleTiles.Length)];
+		int x2 = posibleTiles[sce.randSerious.Next(posibleTiles.Length)];
 		
-		setPosTarget(sce, new Vector2i(x2 % sce.mapXsize, x2 / sce.mapXsize));
+		setPosTarget(sce, sce.coordinatesOfFlatIndex(x2));
 		target = null;
 	}
 	
@@ -222,12 +220,12 @@ class Necromancer : Living{
 		minions.Add(s);
 		sce.entitiesToAdd.Add(s);
 		
-		int c = sce.rand.Next(3) + 1;
+		int c = sce.randCasual.Next(3) + 1;
 		for(int i = 0; i < c; i++){
 			sce.pr.add(new MagicParticle(getParticlePos()));
 		}
 		
-		c = sce.rand.Next(3) + 1;
+		c = sce.randCasual.Next(3) + 1;
 		for(int i = 0; i < c; i++){
 			sce.pr.add(new MagicParticle(s.position + new Vector2d(0d, 0.5d)));
 		}
@@ -243,12 +241,12 @@ class Necromancer : Living{
 	}
 	
 	protected override void onDeath(Scene sce, Living s){
-		sce.sm.play(deathSound, new Vector3(position.X, position.Y, 0f), 1f, 0.6f + (float)sce.rand.NextDouble() * 0.7f);
+		sce.sm.play(deathSound, new Vector3(position.X, position.Y, 0f), 1f, 0.6f + (float)sce.randCasual.NextDouble() * 0.7f);
 		if(s == sce.p){
 			sce.p.score += 50;
 		}
 		
-		int c = sce.rand.Next(8) + 4;
+		int c = sce.randCasual.Next(8) + 4;
 		for(int i = 0; i < c; i++){
 			sce.pr.add(new MagicParticle(position + new Vector2d(0d, 0.7d)));
 		}
@@ -259,7 +257,7 @@ class Necromancer : Living{
 	}
 	
 	protected override void onHurt(Scene sce, Living s){
-		sce.sm.play(hurtSound, new Vector3(position.X, position.Y, 0f), 1f, 0.5f + (float)sce.rand.NextDouble() * 0.8f);
+		sce.sm.play(hurtSound, new Vector3(position.X, position.Y, 0f), 1f, 0.5f + (float)sce.randCasual.NextDouble() * 0.8f);
 	}
 	
 	protected override void onAttack(Scene sce, Living s){
@@ -274,9 +272,9 @@ class Necromancer : Living{
 		if(time > maxTime){
 			time = 0d;
 			
-			sce.sm.play(whisperSound, new Vector3(position.X, position.Y, 0f), 0.08f, 0.8f + (float)sce.rand.NextDouble() * 0.5f, 6f);
+			sce.sm.play(whisperSound, new Vector3(position.X, position.Y, 0f), 0.08f, 0.8f + (float)sce.randCasual.NextDouble() * 0.5f, 6f);
 			
-			maxTime = getRandom(sce, 7d, 30d);
+			maxTime = getRandomCasual(sce, 7d, 30d);
 		}
 	}
 	

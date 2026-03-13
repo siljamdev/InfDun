@@ -22,7 +22,7 @@ using Keys = OpenTK.Windowing.GraphicsLibraryFramework.Keys;
 
 partial class Dungeon : GameWindow{
 	
-	public const string version = "0.1.4";
+	public const string version = "0.2";
 	
 	#region static
 	public static ConcurrentQueue<IDisposable> resourcesMarkedForDisposal = new(); //Need to disposeOfResources of these on the same thread or else a Fatal error will occur
@@ -115,6 +115,7 @@ partial class Dungeon : GameWindow{
 	#if DEBUG_LEVELS
 		KeyBind skipLevel = new KeyBind(Keys.I, false);
 		KeyBind zoomCamera = new KeyBind(Keys.Z, Keys.LeftShift, false);
+		KeyBind resetCamera = new KeyBind(Keys.X, false);
 	#endif
 	
 	public Dependencies dep {get; private set;}
@@ -135,8 +136,10 @@ partial class Dungeon : GameWindow{
 		set{
 			config.Set("highscore", value);
 			config.Save();
-			high.setText("Highscore: " + value);
-			highscor.setText("Highscore: " + value);
+			
+			//Screens
+			mainHighscoreText.setText("Highscore: " + value);
+			deathHighscoreText.setText("Highscore: " + value);
 		}
 	}
 	
@@ -313,6 +316,11 @@ partial class Dungeon : GameWindow{
 				Camera.zoomD -= 3f;
 				onResize(ren.width, ren.height);
 				break;
+			}
+			
+			if(resetCamera.isActive(KeyboardState)){
+				Camera.zoomD = 18.4f;
+				onResize(ren.width, ren.height);
 			}
 		#endif
 		
@@ -569,9 +577,7 @@ partial class Dungeon : GameWindow{
         if(e.Button == MouseButton.Left){
 			if(sce != null){
 				if(ren.currentScreen == null){
-					if(!ren.overlayScreen.click(ren, KeyboardState.IsKeyDown(Keys.LeftShift))){
-						sce.click();
-					}
+					sce.click();
 				}else{
 					ren.currentScreen.click(ren, KeyboardState.IsKeyDown(Keys.LeftShift));
 				}

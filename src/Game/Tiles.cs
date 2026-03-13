@@ -7,7 +7,7 @@ static class Tile{
 	//Texture atlas size
 	static readonly Vector2i tileSpriteNum = new Vector2i(16, 2);
 	
-	public readonly static int[] transitables = new int[]{Floor, Puddle, Exit, Start, Skull, Fungi, SmallPuddle};
+	public readonly static int[] transitables = new int[]{Floor, Puddle, Exit, Start, Skull, Fungi, SmallPuddle, Pots};
 	public readonly static int[] withRandomRotation = new int[]{Floor, Puddle, Fungi, SmallPuddle};
 	
 	public const int Air = 0;
@@ -20,6 +20,7 @@ static class Tile{
 	public const int Skull = 19;
 	public const int Fungi = 20;
 	public const int SmallPuddle = 21;
+	public const int Pots = 23;
 	
 	public const int Wall = 3;
 	public const int TorchWall = 16;

@@ -5,8 +5,8 @@ using AshLib;
 using Keys = OpenTK.Windowing.GraphicsLibraryFramework.Keys;
 
 partial class Dungeon{
-	UiText highscor;
 	UiScreen mainMenu;
+	UiText mainHighscoreText;
 	
 	UiScreen infoMenu;
 	
@@ -20,16 +20,17 @@ partial class Dungeon{
 	
 	UiScreen pauseMenu;
 	
-	public UiScreen deathMenu;
-	public UiText score;
-	UiText high;
+	UiScreen deathMenu;
+	UiText deathScoreText;
+	UiText deathHighscoreText;
+	UiText deathLevelnumText;
 	
 	void initializeScreens(){
-		highscor = new UiText(Placement.BottomCenter, 0f, 20f, "Highscore: -1").setColor(new Color3("FFFF70"));
+		mainHighscoreText = new UiText(Placement.BottomCenter, 0f, 20f, "Highscore: -1").setColor(Renderer.highscoreColor);
 		
 		mainMenu = new UiScreen(
 			new UiImage(Placement.TopCenter, 0, 20, 110, 110, "icon").setColor(Color3.White),
-			highscor,
+			mainHighscoreText,
 			new UiButton(Placement.Center, 0, -1f * Renderer.separation, 300f, "Play").setAction(setNewScene),
 			new UiButton(Placement.Center, 0, 0, 300f, "Options").setAction(() => ren.setScreen(optionsMenu)),
 			new UiButton(Placement.Center, 0, 2f * Renderer.separation, 300f, "Exit").setColor(Renderer.greenButtonColor).setAction(Close),
@@ -56,12 +57,15 @@ partial class Dungeon{
 			new UiButton(Placement.BottomCenter, 0f, 1f * Renderer.separation, 300f, "Close").setColor(Renderer.redButtonColor).setAction(ren.closeScreen)
 		).addScrollingLog(new UiLog(20f, 20f, 3f * Renderer.textSize.Y,
 					"This game is a turn based dungeon crawler",
-					"You control the player, and your objective is getting the most points before dying",
-					"The game works on turns, each turn you can do one action(either moving, or attacking), and then, other creatures will do their turn",
-					"You start on level 0, and can go to the next by finding the stairs that go down. Levels get progressively harder",
+					"You control the player, and your objective is to get the most points before dying",
+					"The game works on turns, each turn you can do one action(either moving, interacting or attacking), and then, other creatures will do their turn",
+					"You start on level 0, and descend to the next by finding the stairs that go down. Levels get progressively harder",
 					"You start with 10 lives and you can increase the maximum with magical orbs or with altars",
-					"You get points by collecting coins, killing creatures and passing to the next level",
-					"Try to get the best highscore and challenge your friends"
+					"Sometimes locked rooms appear. You will need to find a key to open these rooms",
+					"You get points by collecting coins, killing creatures, opening doors and passing to the next level",
+					"Try to get the best highscore and challenge your friends",
+					"",
+					"Small tip: never kill frogs"
 		));
 		
 		(string key, object value, string description)[] options = getConfigurableOptions();
@@ -252,16 +256,25 @@ partial class Dungeon{
 			}).setDescription("Take screenshot")
 		);
 		
-		score = new UiText(Placement.Center, 0f, 10f, "Score: -1").setCharSize(Renderer.middleTextSize);
-		high = new UiText(Placement.Center, 0f, 50f, "Highscore: -1").setColor(new Color3("FFFF70"));
+		deathScoreText = new UiText(Placement.Center, 0f, -10f, "Score: -1").setCharSize(Renderer.middleTextSize);
+		deathLevelnumText = new UiText(Placement.Center, 0f, 40f, "Level -1");
+		deathHighscoreText = new UiText(Placement.BottomCenter, 0f, 20f, "Highscore: -1").setColor(Renderer.highscoreColor);
 		
 		deathMenu = new UiScreen(
-			new UiText(Placement.Center, 0f, -60f, "You died").setColor(Color3.Red).setCharSize(Renderer.bigTextSize),
-			score,
-			high,
-			new UiButton(Placement.BottomCenter, -120f, 1f * Renderer.separation, 200f, "Return to menu").setColor(Renderer.redButtonColor).setAction(closeScene),
-			new UiButton(Placement.BottomCenter, 120f, 1f * Renderer.separation, 200f, "Play again").setColor(Renderer.redButtonColor).setAction(setNewScene)
+			new UiText(Placement.Center, 0f, -80f, "You died").setColor(Color3.Red).setCharSize(Renderer.bigTextSize),
+			deathScoreText,
+			deathLevelnumText,
+			deathHighscoreText,
+			new UiButton(Placement.Center, -118f, 3f * Renderer.separation, 220f, "Return to menu").setColor(Renderer.redButtonColor).setAction(closeScene),
+			new UiButton(Placement.Center, 118f, 3f * Renderer.separation, 220f, "Play again").setColor(Renderer.redButtonColor).setAction(setNewScene)
 		);
+	}
+	
+	public void setDeathScreen(int score, int levelNum){
+		deathScoreText.setText("Score: " + score);
+		deathLevelnumText.setText("Level " + levelNum);
+		
+		ren.setScreen(deathMenu);
 	}
 	
 	static void openUrl(string url){

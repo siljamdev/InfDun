@@ -8,7 +8,7 @@ class Magic : Entity{
 	
 	Animation idleAnimation = new Animation(2, 0, 0.1d);
 	
-	protected override int atlasColumn => 13;
+	protected override int atlasRow => 13;
 	
 	public Magic(Vector2i p, Living t2) : base(p){
 		doCollision = false;

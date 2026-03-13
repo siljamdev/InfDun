@@ -40,15 +40,19 @@ abstract class Entity{
 		Altar.initialize();
 		//BefriendingAltar.initialize();
 		DripGenerator.initialize();
+		Door.initialize();
+		Key.initialize();
 	}
 	
 	public static void setProjection(Matrix4 m){
 		//proj = m;
 		entityShader.setMatrix4("projection", m);
+		Door.setProjection(m);
 	}
 	
 	public static void setView(Matrix4 m){
 		entityShader.setMatrix4("view", m);
+		Door.setView(m);
 	}
 	#endregion static
 	
@@ -56,7 +60,7 @@ abstract class Entity{
 	public Vector2i oldPosition;
 	public EntityState state;
 	
-	protected virtual int atlasColumn => 0;
+	protected virtual int atlasRow => 0;
 	
 	public bool facingLeft;
 	
@@ -75,12 +79,19 @@ abstract class Entity{
 		return Vector2.DistanceSquared(position, s.position);
 	}
 	
-	public float distanceSquared(Vector2i s){
-		return Vector2.DistanceSquared(position, s);
+	public float distanceSquared(Vector2i? s){
+		if(s == null){
+			return -1f;
+		}
+		return Vector2.DistanceSquared(position, (Vector2i) s);
 	}
 	
-	public float distance(Vector2i s){
-		return (Vector2.Distance(position, s) + Vector2.Distance(oldPosition, s)) / 2f;
+	public float distance(Vector2i? s){
+		if(s == null){
+			return -1f;
+		}
+		
+		return (Vector2.Distance(position, (Vector2i) s) + Vector2.Distance(oldPosition, (Vector2i) s)) / 2f;
 	}
 	
 	public float distance(Entity s){
@@ -134,7 +145,7 @@ abstract class Entity{
 		
 		entityShader.use();
 		entityShader.setMatrix4("model", model);
-		entityShader.setVector2i("sprite", new Vector2i(getAnimationFrame(sce), atlasColumn));
+		entityShader.setVector2i("sprite", new Vector2i(getAnimationFrame(sce), atlasRow));
 		entityShader.setBool("isHurt", getHurt());
 		entityShader.setFloat("alpha", getAlpha());
 		
@@ -143,8 +154,8 @@ abstract class Entity{
 		entityMesh.draw();
 	}
 	
-	protected static double getRandom(Scene sce, double min, double max){
-		return sce.getRandom(min, max);
+	protected static double getRandomCasual(Scene sce, double min, double max){
+		return sce.getRandomCasual(min, max);
 	}
 	
 	protected static double getRandom(Random rand, double min, double max){

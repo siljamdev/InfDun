@@ -3,7 +3,7 @@ using OpenTK;
 using OpenTK.Graphics.OpenGL;
 using OpenTK.Mathematics;
 
-class DripGenerator : Entity{
+class DripGenerator : Inanimate{
 	static SoundPool dripSound;
 	
 	public static void initialize(){
@@ -15,8 +15,10 @@ class DripGenerator : Entity{
 	
 	bool gen;
 	
-	public DripGenerator(Vector2i p) : base(p){
+	public DripGenerator(Vector2i p, Random rand) : base(p){
 		doCollision = false;
+		
+		maxTime = getRandom(rand, 0d, 13d);
 	}
 	
 	public override void draw(Scene sce){
@@ -25,21 +27,22 @@ class DripGenerator : Entity{
 			time = 0d;
 			gen = false;
 			
-			sce.sm.play(dripSound.get(sce.rand), new Vector3(position.X, position.Y, 0f), 1f, 0.8f + (float)sce.rand.NextDouble() * 0.4f, 2.5f);
+			sce.sm.play(dripSound.get(sce.randCasual), new Vector3(position.X, position.Y, 0f), 1f, 0.8f + (float)sce.randCasual.NextDouble() * 0.4f, 2.5f);
 			
-			int c = sce.rand.Next(8) + 4;
+			int c = sce.randCasual.Next(8) + 4;
 			for(int i = 0; i < c; i++){
 				sce.pr.add(new SplashParticle(position));
 			}
 			
-			maxTime = getRandom(sce, 3d, 10d);
+			maxTime = getRandomCasual(sce, 3d, 13d);
 		}else if(!gen && time > maxTime){
 			gen = true;
 			sce.pr.add(new DripParticle(position));
 		}
 		
-		/* AABB b = new AABB(position.Y + 1d, position.Y, position.X - 0.5d, position.X + 0.5d);
-		
-		b.drawWorld(); */
+		//if(time > maxTime){
+		//	AABB b = new AABB(position.Y + 1d, position.Y, position.X - 0.5d, position.X + 0.5d);
+		//	b.drawWorld();
+		//}
 	}
 }

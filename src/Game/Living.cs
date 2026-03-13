@@ -112,19 +112,19 @@ abstract class Living : Entity{
 	}
 	
 	protected virtual void onMove(Scene sce){
-		sce.sm.play(stepSound.get(sce.rand), new Vector3(position.X, position.Y, 0f), 0.5f, 0.8f + (float)sce.rand.NextDouble() * 0.4f);
+		sce.sm.play(stepSound.get(sce.randCasual), new Vector3(position.X, position.Y, 0f), 0.5f, 0.8f + (float)sce.randCasual.NextDouble() * 0.4f);
 	}
 	
 	protected virtual void onHurt(Scene sce, Living s){
-		sce.sm.play(hurtSound, new Vector3(position.X, position.Y, 0f), 1f, 0.6f + (float)sce.rand.NextDouble() * 0.7f);
+		sce.sm.play(hurtSound, new Vector3(position.X, position.Y, 0f), 1f, 0.6f + (float)sce.randCasual.NextDouble() * 0.7f);
 	}
 	
 	protected virtual void onDeath(Scene sce, Living s){
-		sce.sm.play(deathSound, new Vector3(position.X, position.Y, 0f), 1f, 0.6f + (float)sce.rand.NextDouble() * 0.7f);
+		sce.sm.play(deathSound, new Vector3(position.X, position.Y, 0f), 1f, 0.6f + (float)sce.randCasual.NextDouble() * 0.7f);
 	}
 	
 	protected virtual void onAttack(Scene sce, Living s){
-		int c = sce.rand.Next(5) + 2;
+		int c = sce.randCasual.Next(5) + 2;
 		for(int i = 0; i < c; i++){
 			sce.pr.add(new BloodParticle(sce, this));
 		}
@@ -329,8 +329,7 @@ abstract class Living : Entity{
 	}
 	
 	//Independent
-	protected static Vector2i? findFirstMove(Vector2i start, Vector2i target, Scene sce)
-	{
+	protected static Vector2i? findFirstMove(Vector2i start, Vector2i target, Scene sce){
 		// Fast visited array
 		bool[,] visited = new bool[sce.mapXsize, sce.mapYsize];
 		visited[start.X, start.Y] = true;

@@ -25,7 +25,7 @@ class Skeleton : Living{
 	
 	Vector2i offset;
 	
-	protected override int atlasColumn => 4;
+	protected override int atlasRow => 4;
 	
 	Living target = null;
 	//Vector2i? posTarget = null;
@@ -40,16 +40,16 @@ class Skeleton : Living{
 	public Skeleton(Vector2i p, Necromancer o, bool? lef, Scene sce) : base(p){
 		master = o;
 		if(master != null){
-			sce.sm.play(deathSound, new Vector3(position.X, position.Y, 0f), 1f, 0.5f + (float)sce.rand.NextDouble() * 0.5f);
+			sce.sm.play(deathSound, new Vector3(position.X, position.Y, 0f), 1f, 0.5f + (float)sce.randCasual.NextDouble() * 0.5f);
 		}
 		
-		facingLeft = lef ?? sce.rand.Next(2) == 0;
+		facingLeft = lef ?? sce.randCasual.Next(2) == 0;
 		
 		health = 2;
 		
 		posCounter = -1;
 		
-		offset = offsets[sce.rand.Next(offsets.Length)];
+		offset = offsets[sce.randSerious.Next(offsets.Length)];
 	}
 	
 	public override bool doTurn(Scene sce){
@@ -99,7 +99,7 @@ class Skeleton : Living{
 		}
 		
 		//Do nothing
-		if(sce.rand.Next(4) == 0){
+		if(sce.randSerious.Next(4) == 0){
 			#if DEBUG_TIME
 				Scene.tt.CategoryEnd(cat);
 			#endif
@@ -160,38 +160,38 @@ class Skeleton : Living{
 	}
 	
 	void setTar(Scene sce){
-		Entity[] possible = sce.entities.Where(n => (n != this && n is Necromancer)).Where(n => n.distanceSquared(position) < maxDistSq).ToArray();
+		Entity[] possible = sce.entitiesLiving.Where(n => (n != this && n is Necromancer)).Where(n => n.distanceSquared(position) < maxDistSq).ToArray();
 		
 		if(possible.Length == 0){
 			target = null;
 			return;
 		}
 		
-		Living x2 = possible[sce.rand.Next(possible.Length)] as Living;
+		Living x2 = possible[sce.randSerious.Next(possible.Length)] as Living;
 		
 		target = x2;
 		setPosTarget(sce, null);
 	}
 	
 	void setPosTar(Scene sce){
-		int[] posibleTiles = sce.transitable.Select((v, i) => (v, i)).Where(n => n.Item1).Select(n => n.Item2).
-		Where(n => this.distanceSquared(new Vector2i(n % sce.mapXsize, n / sce.mapXsize)) < wanderDistSq).ToArray();
+		int[] posibleTiles = sce.transitableTiles.Select((v, i) => (v, i)).Where(n => n.Item1).Select(n => n.Item2).
+		Where(n => this.distanceSquared(sce.coordinatesOfFlatIndex(n)) < wanderDistSq).ToArray();
 		
-		int x2 = posibleTiles[sce.rand.Next(posibleTiles.Length)];
+		int x2 = posibleTiles[sce.randSerious.Next(posibleTiles.Length)];
 		
-		setPosTarget(sce, new Vector2i(x2 % sce.mapXsize, x2 / sce.mapXsize));
+		setPosTarget(sce, sce.coordinatesOfFlatIndex(x2));
 		target = null;
 	}
 	
 	protected override void onDeath(Scene sce, Living s){
-		sce.sm.play(deathSound, new Vector3(position.X, position.Y, 0f), 1f, 0.6f + (float)sce.rand.NextDouble() * 0.7f);
+		sce.sm.play(deathSound, new Vector3(position.X, position.Y, 0f), 1f, 0.6f + (float)sce.randCasual.NextDouble() * 0.7f);
 		if(s == sce.p){
 			sce.p.score += 10;
 		}
 	}
 	
 	protected override void onHurt(Scene sce, Living s){
-		sce.sm.play(hurtSound, new Vector3(position.X, position.Y, 0f), 1f, 0.6f + (float)sce.rand.NextDouble() * 0.7f);
+		sce.sm.play(hurtSound, new Vector3(position.X, position.Y, 0f), 1f, 0.6f + (float)sce.randCasual.NextDouble() * 0.7f);
 	}
 	
 	protected override void onAttack(Scene sce, Living s){

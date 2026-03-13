@@ -3,7 +3,7 @@ using OpenTK;
 using OpenTK.Graphics.OpenGL;
 using OpenTK.Mathematics;
 
-class Altar : Entity{
+class Altar : Inanimate{
 	static Sound altarSound;
 	
 	public static void initialize(){
@@ -11,7 +11,7 @@ class Altar : Entity{
 		BefriendingAltar.initialize(altarSound); //Avoid double sound
 	}
 	
-	protected override int atlasColumn => 11;
+	protected override int atlasRow => 11;
 	
 	double time;
 	double maxTime;
@@ -30,14 +30,14 @@ class Altar : Entity{
 		sce.p.maxHealth += 1;
 		sce.p.damage(1, null, sce);
 		
-		sce.sm.play(altarSound, new Vector3(position.X, position.Y, 0f), 0.9f, 0.6f + (float)sce.rand.NextDouble() * 0.8f);
+		sce.sm.play(altarSound, new Vector3(position.X, position.Y, 0f), 0.9f, 0.6f + (float)sce.randCasual.NextDouble() * 0.8f);
 		
-		int c = sce.rand.Next(5) + 3;
+		int c = sce.randCasual.Next(5) + 3;
 		for(int i = 0; i < c; i++){
 			sce.pr.add(new AltarParticle(position + new Vector2d(0d, 0.5d)));
 		}
 		
-		c = sce.rand.Next(5) + 3;
+		c = sce.randCasual.Next(5) + 3;
 		for(int i = 0; i < c; i++){
 			sce.pr.add(new AltarParticle(sce.p.position + new Vector2d(0d, 0.5d)));
 		}
@@ -54,7 +54,7 @@ class Altar : Entity{
 			
 			sce.pr.add(new AltarParticle(position + new Vector2d(0d, 0.5d)));
 			
-			maxTime = getRandom(sce, 0.8d, 4d);
+			maxTime = getRandomCasual(sce, 0.8d, 4d);
 		}
 	}
 }

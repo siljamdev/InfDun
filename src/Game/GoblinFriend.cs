@@ -18,7 +18,7 @@ class GoblinFriend : Living{
 	Vector2i offset;
 	
 	int _c;
-	protected override int atlasColumn => _c;
+	protected override int atlasRow => _c;
 	
 	public Living target = null;
 	//Vector2i? posTarget = null;
@@ -38,7 +38,7 @@ class GoblinFriend : Living{
 		
 		master.addFriend(this);
 		
-		offset = offsets[sce.rand.Next(offsets.Length)];
+		offset = offsets[sce.randSerious.Next(offsets.Length)];
 	}
 	
 	public override bool doTurn(Scene sce){
@@ -77,7 +77,7 @@ class GoblinFriend : Living{
 		}
 		
 		//Do nothing
-		if(sce.rand.Next(3) == 0){
+		if(sce.randSerious.Next(3) == 0){
 			#if DEBUG_TIME
 				Scene.tt.CategoryEnd(cat);
 			#endif
@@ -138,12 +138,12 @@ class GoblinFriend : Living{
 	}
 	
 	void setPosTar(Scene sce){
-		int[] posibleTiles = sce.transitable.Select((v, i) => (v, i)).Where(n => n.Item1).Select(n => n.Item2).
-		Where(n => this.distanceSquared(new Vector2i(n % sce.mapXsize, n / sce.mapXsize)) < wanderDistSq).ToArray();
+		int[] posibleTiles = sce.transitableTiles.Select((v, i) => (v, i)).Where(n => n.Item1).Select(n => n.Item2).
+		Where(n => this.distanceSquared(sce.coordinatesOfFlatIndex(n)) < wanderDistSq).ToArray();
 		
-		int x2 = posibleTiles[sce.rand.Next(posibleTiles.Length)];
+		int x2 = posibleTiles[sce.randSerious.Next(posibleTiles.Length)];
 		
-		setPosTarget(sce, new Vector2i(x2 % sce.mapXsize, x2 / sce.mapXsize));
+		setPosTarget(sce, sce.coordinatesOfFlatIndex(x2));
 		target = null;
 	}
 	

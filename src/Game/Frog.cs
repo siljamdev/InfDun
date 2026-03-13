@@ -14,7 +14,7 @@ class Frog : Living{
 		ambientSound = new SoundPool(Sound.monoFromAssembly("res.sounds.frogsnd0.ogg"), Sound.monoFromAssembly("res.sounds.frogsnd1.ogg"));
 	}
 	
-	protected override int atlasColumn => 14;
+	protected override int atlasRow => 14;
 	
 	double time;
 	double maxTime;
@@ -28,12 +28,12 @@ class Frog : Living{
 		
 		health = 1;
 		
-		maxTime = getRandom(rand, 6d, 25d);
+		maxTime = getRandom(rand, 1d, 25d);
 	}
 	
 	public override bool doTurn(Scene sce){
 		//Do nothing
-		if(sce.rand.Next(2) == 0){
+		if(sce.randSerious.Next(2) == 0){
 			#if DEBUG_TIME
 				Scene.tt.CategoryEnd(cat);
 			#endif
@@ -41,7 +41,7 @@ class Frog : Living{
 		}
 		
 		//Move
-		Vector2i jumpTarget = position + new Vector2i(sce.rand.Next(-1, 2), sce.rand.Next(-1, 2));
+		Vector2i jumpTarget = position + new Vector2i(sce.randSerious.Next(-1, 2), sce.randSerious.Next(-1, 2));
 		if(tryMove(jumpTarget, sce)){
 			#if DEBUG_TIME
 				Scene.tt.CategoryEnd(cat);
@@ -56,10 +56,10 @@ class Frog : Living{
 	}
 	
 	protected override void onDeath(Scene sce, Living s){
-		sce.sm.play(deathSound, new Vector3(position.X, position.Y, 0f), 0.4f, 0.6f + (float)sce.rand.NextDouble() * 0.6f);
+		sce.sm.play(deathSound, new Vector3(position.X, position.Y, 0f), 0.4f, 0.6f + (float)sce.randCasual.NextDouble() * 0.6f);
 		
 		if(s == sce.p){
-			sce.p.score -= 10;
+			sce.p.score -= 30;
 		}
 	}
 	
@@ -68,11 +68,11 @@ class Frog : Living{
 	}
 	
 	protected override void onHurt(Scene sce, Living s){
-		sce.sm.play(hurtSound, new Vector3(position.X, position.Y, 0f), 0.8f, 0.7f + (float)sce.rand.NextDouble() * 0.5f);
+		sce.sm.play(hurtSound, new Vector3(position.X, position.Y, 0f), 0.8f, 0.7f + (float)sce.randCasual.NextDouble() * 0.5f);
 	}
 	
 	protected override void onAttack(Scene sce, Living s){
-		int c = sce.rand.Next(5) + 2;
+		int c = sce.randCasual.Next(5) + 2;
 		for(int i = 0; i < c; i++){
 			sce.pr.add(new FrogBloodParticle(sce, this));
 		}
@@ -80,7 +80,7 @@ class Frog : Living{
 	
 	//public override void endSmooth(Scene sce){	
 	//	if(state == EntityState.moving){
-	//		int c = sce.rand.Next(4) + 3;
+	//		int c = sce.randCasual.Next(4) + 3;
 	//		for(int i = 0; i < c; i++){
 	//			sce.pr.add(new SplashParticle(position - new Vector2(0f, 0.0f)));
 	//		}
@@ -97,9 +97,9 @@ class Frog : Living{
 		if(time > maxTime){
 			time = 0d;
 			
-			sce.sm.play(ambientSound.get(sce.rand), new Vector3(position.X, position.Y, 0f), 0.4f, 0.8f + (float)sce.rand.NextDouble() * 0.5f, 6f);
+			sce.sm.play(ambientSound.get(sce.randCasual), new Vector3(position.X, position.Y, 0f), 0.4f, 0.8f + (float)sce.randCasual.NextDouble() * 0.5f, 6f);
 			
-			maxTime = getRandom(sce, 6d, 25d);
+			maxTime = getRandomCasual(sce, 6d, 25d);
 		}
 	}
 	
@@ -111,7 +111,7 @@ class Frog : Living{
 		if(state == EntityState.idle){
 			return sce.idleAnimation.frame;
 		}else if(state == EntityState.moving){
-			return sce.frogAnimation?.frame ?? 2;
+			return sce.frogAnimationFrame;
 		}
 		
 		return 0;

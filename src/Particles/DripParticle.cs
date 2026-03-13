@@ -9,7 +9,7 @@ class DripParticle : Particle{
 	static readonly Color3 col = new Color3("6384DD");
 	
 	protected override Vector2 positionOffset => new Vector2(0f, -4.9f * life * life);
-	protected override Vector2 scale => new Vector2(0.1f);
+	protected override Vector2 scale => new Vector2(0.1f, 0.1f + 0.1f * lifeFactor);
 	
 	protected override Color3 color => col;
 	protected override float alpha => 0.7f;

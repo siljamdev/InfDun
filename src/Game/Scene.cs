@@ -5,7 +5,7 @@ using OpenTK.Mathematics;
 using AshLib;
 using AshLib.Time;
 
-class Scene : IDisposable{	
+class Scene : IDisposable{
 	static Shader tileShader;
 	static Texture2D tileTexture;
 	static Texture2D tileAltTexture;
@@ -52,22 +52,29 @@ class Scene : IDisposable{
 	public Animation idleAnimation{get; private set;}
 	public Animation runningAnimation{get; private set;}
 	public Animation coinAnimation{get; private set;}
-	public Animation frogAnimation{get; private set;}
+	
+	public int frogAnimationFrame => smoothTime > smoothTimeMax/2f ? 3 : 2;
 	
 	//Tiles
 	public int[] tiles{get; private set;}
 	public int mapXsize{get; private set;}
 	public int mapYsize{get; private set;}
 	
-	public bool[] transitable{get; private set;}
+	Vector2i exitPos;
 	
-	public bool[] globalTransitable{get; private set;}
+	public bool[] transitableTiles{get; private set;} //Answers the question. is tile transitable?
+	
+	public bool[] globalTransitable{get; private set;} //Only built and used during turns, has entities positions
 	
 	Mesh tilesMesh;
 	
 	//Void particles counter
 	double voidTime;
-	const double voidTimeMax = 0.1f;
+	const double voidTimeMax = 0.3d;
+	
+	//Time player has been in the current level
+	double startLevelTime;
+	double levelTime => Dungeon.dh.GetTime() - startLevelTime;
 	
 	public bool canMovePlayer => (!doingSmoothing) && (!doingDescent);
 	
@@ -75,11 +82,17 @@ class Scene : IDisposable{
 	
 	public Player p{get; private set;}
 	
-	public List<Entity> entities{get; private set;}
-	public List<Entity> entitiesToRemove{get; private set;}
-	public List<Entity> entitiesToAdd{get; private set;}
+	public List<Entity> entitiesInanimate{get; private set;} = new();
+	public List<Entity> entitiesItems{get; private set;} = new();
+	public List<Entity> entitiesLiving{get; private set;} = new();
 	
-	public Random rand{get; private set;}
+	IEnumerable<Entity> allEntities => entitiesInanimate.Concat(entitiesItems).Concat(entitiesLiving);
+	
+	public List<Entity> entitiesToRemove{get; private set;} = new();
+	public List<Entity> entitiesToAdd{get; private set;} = new();
+	
+	public Random randSerious{get; private set;}
+	public Random randCasual{get; private set;}
 	
 	bool playerDidAction;
 	bool playerTriedMoving;
@@ -115,7 +128,8 @@ class Scene : IDisposable{
 		setProjection(ren.projection);
 		setView(null, EventArgs.Empty);
 		
-		rand = new Random();
+		randSerious = new Random();
+		randCasual = new Random(randSerious.Next());
 		
 		smoothTimeMax = 0.3d;
 		doingSmoothing = false;
@@ -125,9 +139,6 @@ class Scene : IDisposable{
 		idleAnimation = new Animation(2, 0, 0.3d);
 		runningAnimation = new Animation(2, 2, 0.1d);
 		coinAnimation = new Animation(8, 0, 0.1d);
-		
-		entitiesToRemove = new List<Entity>();
-		entitiesToAdd = new List<Entity>();
 		
 		p = new Player(Vector2i.Zero);
 		
@@ -140,7 +151,7 @@ class Scene : IDisposable{
 	
 	void newLevel(){
 		//Play bell
-		sm.playNonPositional(bellSound.get(rand), 1f);
+		sm.playNonPositional(bellSound.get(randCasual), 1f);
 		
 		//Increment level
 		levelNum++;
@@ -149,22 +160,28 @@ class Scene : IDisposable{
 		smoothTime = 0d;
 		smoothTimeMax = 0.3d;
 		
-		//Generate
-		LevelGenerator gen = new LevelGenerator(levelNum, rand);
+		startLevelTime = Dungeon.dh.GetTime();
 		
-		(int[,] m, entities, Vector2i startPos) = gen.generate();
+		//Generate
+		LevelGenerator gen = new LevelGenerator(levelNum, randSerious, randCasual);
+		
+		(int[,] m, List<Entity> entities, Vector2i startPos, exitPos) = gen.generate();
 		
 		mapYsize = m.GetLength(0);
 		mapXsize = m.GetLength(1);
 		
 		//Set limit
-		Necromancer.minionLimit = (levelNum - 3) / 4;
+		Necromancer.minionLimit = (levelNum - 1) / 3;
+		
+		//Clear particles
+		pr.clear();
 		
 		//Entities
-		entities = sortEntities(entities);
+		clearEntities();
+		addEntities(entities);
 		
 		//Player
-		entities.Add(p);
+		entitiesLiving.Add(p);
 		p.newLevel(this, startPos);
 		
 		//Set camera
@@ -172,15 +189,15 @@ class Scene : IDisposable{
 		
 		//Tiles
 		tiles = m.Cast<int>().ToArray();
-		transitable = tiles.Select(n => Tile.transitables.Contains(n)).ToArray();
+		transitableTiles = tiles.Select(n => Tile.transitables.Contains(n)).ToArray();
 		
 		//Tile mesh
-		tilesMesh = Tile.createTilesMesh(tiles, mapXsize, mapYsize, rand);
+		tilesMesh = Tile.createTilesMesh(tiles, mapXsize, mapYsize, randCasual);
 		
 		//Setup global map
-		globalTransitable = (bool[]) transitable.Clone();
+		globalTransitable = (bool[]) transitableTiles.Clone();
 		
-		foreach(Entity e in entities){
+		foreach(Entity e in allEntities){
 			if(!e.doCollision){
 				continue;
 			}
@@ -189,7 +206,7 @@ class Scene : IDisposable{
 		}
 		
 		//Init entities
-		foreach(Entity e in entities){
+		foreach(Entity e in allEntities){
 			e.newLevel(this);
 		}
 		
@@ -197,7 +214,7 @@ class Scene : IDisposable{
 		globalTransitable = null;
 		
 		//Detail
-		altTiles = rand.Next(33) == 0;
+		altTiles = randCasual.Next(33) == 0;
 	}
 	
 	void turnEntities(){
@@ -208,9 +225,9 @@ class Scene : IDisposable{
 		bool entityMoved = false;
 		
 		//Setup global map
-		globalTransitable = (bool[]) transitable.Clone();
+		globalTransitable = (bool[]) transitableTiles.Clone();
 		
-		foreach(Entity e in entities){
+		foreach(Entity e in allEntities){
 			if(!e.doCollision){
 				continue;
 			}
@@ -223,7 +240,7 @@ class Scene : IDisposable{
 		#endif
 		
 		//Run turns
-		foreach(Entity e in entities){
+		foreach(Entity e in allEntities){
 			if(e is not Living l){
 				#if DEBUG_TIME
 					tt.CategoryEnd(5);
@@ -272,10 +289,18 @@ class Scene : IDisposable{
 		return x;
 	}
 	
+	public Vector2i? coordinatesOfFlatIndex(int findex){
+		if(findex < 0 || findex >= mapXsize * mapYsize){
+			return null;
+		}
+		
+		return new Vector2i(findex % mapXsize, findex / mapXsize);
+	}
+	
 	public int tileAt(Vector2i v){
 		int x = v.Y * mapXsize + v.X;
 		if(x < 0 || x >= tiles.Length){
-			return 0;
+			return Tile.Air;
 		}
 		
 		return tiles[x];
@@ -294,11 +319,11 @@ class Scene : IDisposable{
 		
 		int x = v.Y * mapXsize + v.X;
 		
-		if(!transitable[x]){
+		if(!transitableTiles[x]){
 			return false;
 		}
 		
-		foreach(Entity e in entities){
+		foreach(Entity e in allEntities){
 			if(e.doCollision && e.position == v){
 				return false;
 			}
@@ -364,7 +389,7 @@ class Scene : IDisposable{
 		int x = (int) (cam.mouseWorldPos.X + 0.5d);
 		int y = (int) cam.mouseWorldPos.Y;
 		
-		foreach(Entity e in entities){
+		foreach(Entity e in allEntities.Reverse()){
 			if(e != p && e.position == new Vector2i(x, y) && e.onClick(this)){
 				playerDidAction = true;
 				break;
@@ -377,7 +402,7 @@ class Scene : IDisposable{
 			return false;
 		}
 		
-		foreach(Entity e in entities){
+		foreach(Entity e in allEntities.Reverse()){
 			if(e != p && e.onClick(this)){
 				playerDidAction = true;
 				return true;
@@ -396,9 +421,42 @@ class Scene : IDisposable{
 		}
 	#endif
 	
+	public void addEntities(List<Entity> l){
+		foreach(Entity e in l){
+			if(e is Inanimate){
+				entitiesInanimate.Add(e);
+			}else if(e is Living || e is Magic){
+				entitiesLiving.Add(e);
+			}else{
+				entitiesItems.Add(e);
+			}
+		}
+	}
+	
+	public void removeEntity(Entity l){
+		entitiesInanimate.Remove(l);
+		entitiesItems.Remove(l);
+		entitiesLiving.Remove(l);
+	}
+	
+	public void removeEntities(List<Entity> l){
+		entitiesInanimate.RemoveAll(n => l.Contains(n));
+		entitiesItems.RemoveAll(n => l.Contains(n));
+		entitiesLiving.RemoveAll(n => l.Contains(n));
+	}
+	
+	public void clearEntities(){
+		entitiesInanimate.Clear();
+		entitiesItems.Clear();
+		entitiesLiving.Clear();
+		
+		entitiesToAdd.Clear();
+		entitiesToRemove.Clear();
+	}
+	
 	public void draw(Renderer ren){
 		//Add entities
-		entities.AddRange(entitiesToAdd);
+		addEntities(entitiesToAdd);
 		entitiesToAdd.Clear();
 		
 		//Update highscore
@@ -426,18 +484,11 @@ class Scene : IDisposable{
 		if(doingSmoothing){
 			smoothTime += Dungeon.dh.deltaTime;
 			
-			if(frogAnimation == null){
-				frogAnimation = new Animation(2, 2, smoothTimeMax/2f);
-			}
-			frogAnimation.tick(Dungeon.dh.deltaTime);
-			
 			if(smoothTime > smoothTimeMax){
 				doingSmoothing = false;
 				smoothTime = 0d;
 				
-				frogAnimation = null;
-				
-				foreach(Entity e in entities){
+				foreach(Entity e in allEntities){
 					e.endSmooth(this);
 				}
 				
@@ -461,7 +512,13 @@ class Scene : IDisposable{
 		voidTime += Dungeon.dh.deltaTime;
 		if(voidTime > voidTimeMax){
 			voidTime = 0d;
-			voidpr.add(new VoidParticle(p.position + new Vector2((float) getRandom(-16f, 16f), (float) getRandom(-16f, 16f))));
+			
+			double t = levelTime; //In secs
+			Vector2d voidDirection = t >= 400d ? (Math.Min(t, 500d) - 400d) / 50d * Vector2d.Normalize(exitPos - p.position) : Vector2.Zero;
+			
+			voidpr.add(new VoidParticle(p.position + new Vector2((float) getRandomCasual(-16f, 16f), (float) getRandomCasual(-16f, 16f)), voidDirection));
+			voidpr.add(new VoidParticle(p.position + new Vector2((float) getRandomCasual(-16f, 16f), (float) getRandomCasual(-16f, 16f)), voidDirection));
+			voidpr.add(new VoidParticle(p.position + new Vector2((float) getRandomCasual(-16f, 16f), (float) getRandomCasual(-16f, 16f)), voidDirection));
 		}
 		
 		//Render void particles
@@ -473,19 +530,18 @@ class Scene : IDisposable{
 		tilesMesh.draw();
 		
 		//Draw entities
-		foreach(Entity e in entities){
+		foreach(Entity e in allEntities){
 			e.draw(this);
 		}
 		
 		//Remove dead entities
-		entities.RemoveAll(n => entitiesToRemove.Contains(n));
+		removeEntities(entitiesToRemove);
 		
 		//Check for dead player
 		if(!playerDead && entitiesToRemove.Contains(p)){
 			ren.screenAlpha = 0f;
 			playerDead = true;
-			ren.dun.score.setText("Score: " + p.score);
-			ren.setScreen(ren.dun.deathMenu);
+			ren.dun.setDeathScreen(p.score, levelNum);
 			smoothTimeMax = 0.5d;
 		}
 		
@@ -516,6 +572,12 @@ class Scene : IDisposable{
 		ren.fr.drawText(p.health.ToString() + "/" + p.maxHealth.ToString() , -ren.width/2f + 45f, ren.height/2f, Renderer.bigTextSize, new Color3("AA0000"));
 		string temp2 = p.score.ToString();
 		ren.fr.drawText(temp2, -temp2.Length / 2 * Renderer.middleTextSize.X, ren.height/2f, Renderer.middleTextSize, Renderer.textColor);
+		
+		//Draw overlay
+		ren.drawTexture("heart", -ren.width/2f, ren.height/2f, 40f, 40f, Color3.White);
+		if(p.hasKey){
+			ren.drawTexture("key", -ren.width/2f, ren.height/2f - 45f, 40f, 40f, Color3.White);
+		}
 	}
 	
 	public void endFrame(){
@@ -539,24 +601,12 @@ class Scene : IDisposable{
 		tileShader.setMatrix4("view", cam.view);
 	}
 	
-	public double getRandom(double min, double max){
-		return rand.NextDouble() * (max - min) + min;
+	public double getRandomCasual(double min, double max){
+		return randCasual.NextDouble() * (max - min) + min;
 	}
 	
-	static List<Entity> sortEntities(List<Entity> l){
-		List<Entity> living = new();
-		List<Entity> items = new(l.Count);
-		
-		foreach(Entity e in l){
-			if(e is Living){
-				living.Add(e);
-			}else{
-				items.Add(e);
-			}
-		}
-		
-		items.AddRange(living);
-		return items;
+	public double getRandomSerious(double min, double max){
+		return randSerious.NextDouble() * (max - min) + min;
 	}
 	
 	public void Dispose(){
