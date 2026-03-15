@@ -411,7 +411,8 @@ class LevelGenerator{
 				break;
 				
 				case 2: //Coins
-				c = 10 + rand.Next(6);
+				int wh = r.w * r.h;
+				c = wh/2 + rand.Next(wh/2);
 				for(int i = 0; i < c; i++){
 					ents.Add(new Coin(getAvailablePos(r)));
 				}
@@ -442,7 +443,8 @@ class LevelGenerator{
 				break;
 				
 				case 1: //Coins
-				c = 7 + rand.Next(4);
+				int wh = r.w * r.h;
+				c = wh/2 + rand.Next(wh/3);
 				for(int i = 0; i < c; i++){
 					ents.Add(new Coin(getAvailablePos(r)));
 				}

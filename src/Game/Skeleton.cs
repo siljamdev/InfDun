@@ -67,7 +67,11 @@ class Skeleton : Living{
 				if(posCounter > 4 || posCounter < 0){
 					posCounter++;
 					
-					setPosTarget(sce, master.position + offset);
+					if(master.posTar != null){
+						setPosTarget(sce, master.posTar + offset);
+					}else{
+						setPosTarget(sce, master.position + offset);
+					}
 				}else{
 					posCounter++;
 				}

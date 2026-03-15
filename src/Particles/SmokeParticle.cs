@@ -6,14 +6,15 @@ using AshLib;
 
 class SmokeParticle : Particle{
 	
-	protected override Vector2 positionOffset => new Vector2(0f, 0.2f * lifeFactor);
+	float _a;
+	protected override Vector2 positionOffset => new Vector2(0f, _a * lifeFactor);
 	
 	float _s;
-	protected override Vector2 scale => new Vector2(0.5f, _s);
+	protected override Vector2 scale => new Vector2(0.5f, _s - 0.08f * lifeFactor);
 	
 	Color3 _c;
 	protected override Color3 color => _c;
-	protected override float alpha => 0.6f - 0.3f * lifeFactor;
+	protected override float alpha => 0.6f - 0.4f * lifeFactor;
 	
 	float _ml;
 	protected override float maxLife => _ml;
@@ -26,6 +27,7 @@ class SmokeParticle : Particle{
 		_c = new Color3(gray, gray, gray);
 		
 		_s = (float) getRandom(0.1f, 0.25f);
+		_a = (float) getRandom(0.2f, 0.5f);
 	}
 	
 	public override bool draw(Renderer ren){

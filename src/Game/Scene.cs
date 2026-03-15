@@ -46,7 +46,7 @@ class Scene : IDisposable{
 	
 	//Death gradual alpha animation
 	public double deathTime{get; private set;}
-	public const double deathTimeMax = 2f;
+	public const double deathTimeMax = 2d;
 	
 	//General animations
 	public Animation idleAnimation{get; private set;}
