@@ -15,6 +15,8 @@
 	
 	<PublishSingleFile>true</PublishSingleFile>
 	<IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+	
+	<BuildDate>$([System.DateTime]::UtcNow.ToString("dd/MM/yyyy"))</BuildDate>
   </PropertyGroup>
   
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
@@ -108,5 +110,36 @@
       <TargetPath>%(Filename)%(Extension)</TargetPath>
     </None>
   </ItemGroup>
+  
+  
+  <!-- BuildInfo Debug -->
+  <Target Name="GenerateBuildInfoDebug" BeforeTargets="CoreCompile" Condition="'$(Configuration)' == 'Debug'" Inputs="$(MSBuildProjectFile)" Outputs="$(IntermediateOutputPath)BuildInfo.g.cs">
+    <WriteLinesToFile File="$(IntermediateOutputPath)BuildInfo.g.cs" Lines="
+public static class BuildInfo{
+	public const string Version = &quot;$(Version)&quot;%3B
+	public const string BuildDate = &quot;$(BuildDate)&quot;%3B
+	public const string AssemblyName = &quot;$(AssemblyName)&quot;%3B
+	public const string Author = &quot;$(Authors)&quot;%3B
+}" Overwrite="true" />
+	
+	<ItemGroup>
+      <Compile Include="$(IntermediateOutputPath)BuildInfo.g.cs" />
+    </ItemGroup>
+  </Target>
+  
+  <!-- BuildInfo Release -->
+  <Target Name="GenerateBuildInfoRelease" BeforeTargets="CoreCompile" Condition="'$(Configuration)' == 'Release'">
+    <WriteLinesToFile File="$(IntermediateOutputPath)BuildInfo.g.cs" Lines="
+public static class BuildInfo{
+	public const string Version = &quot;$(Version)&quot;%3B
+	public const string BuildDate = &quot;$(BuildDate)&quot;%3B
+	public const string AssemblyName = &quot;$(AssemblyName)&quot;%3B
+	public const string Author = &quot;$(Authors)&quot;%3B
+}" Overwrite="true" />
+	
+	<ItemGroup>
+      <Compile Include="$(IntermediateOutputPath)BuildInfo.g.cs" />
+    </ItemGroup>
+  </Target>
   
 </Project>

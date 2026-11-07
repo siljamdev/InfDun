@@ -20,10 +20,7 @@ using AshLib.AshFiles;
 using Keys = OpenTK.Windowing.GraphicsLibraryFramework.Keys;
 
 
-partial class Engine : GameWindow{
-	
-	public const string version = "0.3-beta";
-	
+partial class Engine : GameWindow{	
 	//Need to disposeOfResources of these on the same thread or else a Fatal error will occur
 	public ConcurrentQueue<IDisposable> resourcesMarkedForDisposal = new();
 	
@@ -238,7 +235,7 @@ partial class Engine : GameWindow{
 		config.ApplyModel(afm);
 		
 		//Set current version and path. Might be needed by someone (maybe)
-		config.Set("version", version);
+		config.Set("version", BuildInfo.Version);
 		try{ //Might not work on linux
 			config.Set("path", System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName);
 		}catch{}
@@ -724,7 +721,7 @@ partial class Engine : GameWindow{
 		
 		
 		using(instance = new Engine(new NativeWindowSettings{
-			Title = "InfDun - v" + version,
+			Title = "InfDun - v" + BuildInfo.Version,
 			Vsync = VSyncMode.On,
 			ClientSize = new Vector2i(640, 480),
 			Icon = getIcon(),

@@ -40,7 +40,7 @@ class Screens{
 		infoMenu = new UiScreen(
 			new UiText(Placement.TopCenter, 0f, 20f, "Info").setColor(Renderer.titleTextColor),
 			new UiText(Placement.TopCenter, 0f, 3f * Renderer.textSize.Y, "InfDun, created by siljamdev").setColor(Renderer.selectedTextColor),
-			new UiText(Placement.TopCenter, 0f, 4f * Renderer.textSize.Y, "Version v" + Engine.version).setColor(Renderer.selectedTextColor),
+			new UiText(Placement.TopCenter, 0f, 4f * Renderer.textSize.Y, "Version v" + BuildInfo.Version).setColor(Renderer.selectedTextColor),
 			new UiText(Placement.TopCenter, 0f, 6f * Renderer.textSize.Y, "Based on Generic game template by siljamdev").setColor(Renderer.selectedTextColor),
 			new UiButton(Placement.BottomCenter, 0f, 2f * Renderer.separation, 300f, "GitHub").setAction(() => openUrl("https://github.com/siljamdev/InfDun")),
 			new UiButton(Placement.BottomCenter, 0f, 1f * Renderer.separation, 300f, "Close").setColor(Renderer.redButtonColor).setAction(ren.closeScreen)
