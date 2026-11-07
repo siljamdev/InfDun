@@ -7,7 +7,7 @@
 	<AllowUnsafeBlocks>true</AllowUnsafeBlocks> <!-- Needed because of OpenAL -->
     
 	<AssemblyName>InfDun</AssemblyName>
-    <Version>0.3-beta</Version>
+    <Version>0.3.1-beta</Version>
     <Authors>siljam</Authors>
     <Company>AshProject</Company>
 	

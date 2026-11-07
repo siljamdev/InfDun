@@ -4,6 +4,8 @@ using OpenTK.Graphics.OpenGL;
 using OpenTK.Mathematics;
 
 class MainMenuRenderer : Renderer{
+	public static bool animateMouse;
+	
 	Mesh menuMesh;
 	
 	Shader menuShader;
@@ -31,7 +33,8 @@ class MainMenuRenderer : Renderer{
 		onResize(eng.width, eng.height);
 		
 		eng.onMouseMove += (x, y) => {
-			menuShader?.setVector2("iMouse", new Vector2(x, y));
+			if(animateMouse)
+				menuShader?.setVector2("iMouse", new Vector2(x, y));
 		};
 	}
 	

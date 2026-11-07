@@ -214,7 +214,8 @@ partial class Engine : GameWindow{
 			("uiSound", true, "UI Sound"),
 			("particles", true, "Particles"),
 			("maxParticles", 1000, "Maximum particles"),
-			("clock", true, "Animate turn")
+			("clock", true, "Animate turn"),
+			("mainMenuMouse", true, "Move menu background with mouse")
 		};
 	}
 	
@@ -259,6 +260,7 @@ partial class Engine : GameWindow{
 		
 		UiScreen.uiSounds = config.GetValue<bool>("uiSound");
 		SceneOverlay.showClock = config.GetValue<bool>("clock");
+		MainMenuRenderer.animateMouse = config.GetValue<bool>("mainMenuMouse");
 	}
 	
 	//Reset the ones that appear in options

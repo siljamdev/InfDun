@@ -10,15 +10,6 @@ class Necromancer : Living{
 	static Sound whisperSound;
 	static Sound healSound;
 	
-	//Possible skeletons relative positions
-	static readonly Vector2i[] offsets = new Vector2i[]{
-		new Vector2i(-2, -2), new Vector2i(-1, -2), new Vector2i(0, -2), new Vector2i(1, -2), new Vector2i(2, -2),
-		new Vector2i(-2, -1),                                                                 new Vector2i(2, -1),
-		new Vector2i(-2,  0),                                                                 new Vector2i(2,  0),
-		new Vector2i(-2,  1),                                                                 new Vector2i(2,  1),
-		new Vector2i(-2,  2), new Vector2i(-1,  2), new Vector2i(0,  2), new Vector2i(1,  2), new Vector2i(2,  2)
-	};
-	
 	public static int minionLimit = 1;
 	
 	public static new void initialize(){
