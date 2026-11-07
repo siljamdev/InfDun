@@ -1,0 +1,149 @@
+using System;
+using OpenTK;
+using OpenTK.Graphics.OpenGL;
+using OpenTK.Mathematics;
+
+class Player : Living{
+	static Sound loseSound;
+	
+	public static new void initialize(){
+		loseSound = Sound.monoFromAssembly("res.sounds.lose.ogg");
+	}
+	
+	#if DEBUG_TIME
+		public override int cat => -1;
+	#endif
+	
+	protected override int atlasRow => 0;
+	
+	public int score;
+	public bool hasKey;
+	
+	List<GoblinFriend> friends = new();
+	
+	//Blood particles
+	double time;
+	double maxTime;
+	
+	public Player(Vector2i p) : base(p){
+		maxHealth = 8;
+		health = maxHealth;
+	}
+	
+	public void newLevel(Scene sce, Vector2i y){
+		position = y;
+		oldPosition = y;
+		
+		endSmooth(sce); //To update listener pos
+		
+		facingLeft = true; //Stairs sprite faces left
+		
+		if(friends.Count > 0){
+			cure(1); //Compensate for the lost friends
+		}
+		friends.Clear();
+		
+		cure(1);
+		
+		hasKey = false;
+	}
+	
+	public bool tryMovePlayer(Vector2i? p, Scene sce){
+		if(!sce.isAvailableToMove(p)){ //Null returns false
+			return false;
+		}
+		
+		oldPosition = position;
+		position = (Vector2i) p;
+		state = EntityState.moving;
+		
+		if(position.X < oldPosition.X){
+			facingLeft = true;
+		}else if(position.X > oldPosition.X){
+			facingLeft = false;
+		}
+		
+		onMove(sce);
+		
+		return true;
+	}
+	
+	public void addFriend(GoblinFriend b){
+		friends.Add(b);
+	}
+	
+	public override void endSmooth(Scene sce){
+		base.endSmooth(sce);
+		sce.sm.setPos(new Vector3(position.X, position.Y, 0f)); //Update listener pos
+		
+		friends.RemoveAll(n => n.isDying);
+	}
+	
+	protected override void onMove(Scene sce){
+		sce.sm.playNonPositional(stepSound.get(sce.randCasual), 0.5f, 0.8f + (float)sce.randCasual.NextDouble() * 0.4f);
+	}
+	
+	protected override void onHurt(Scene sce, Living s){
+		sce.sm.playNonPositional(hurtSound, 1f, 0.6f + (float)sce.randCasual.NextDouble() * 0.7f);
+		
+		foreach(GoblinFriend f in friends){
+			f.masterAttacked(s);
+		}
+	}
+	
+	protected override void onDeath(Scene sce, Living s){
+		sce.sm.playNonPositional(loseSound, 0.7f);
+		
+		if(s is Necromancer n){
+			n.addSkeleton(sce, position, facingLeft);
+		}
+	}
+	
+	public override void draw(Scene sce){		
+		Matrix4 model = getModel(sce);
+		
+		entityShader.use();
+		entityShader.setMatrix4("model", model);
+		entityShader.setVector2i("sprite", new Vector2i(getAnimationFrame(sce), atlasRow));
+		entityShader.setBool("isHurt", getHurt());
+		entityShader.setFloat("alpha", 1f);
+		
+		entityTexture.bind();
+		
+		entityMesh.draw();
+		
+		if(isDying && dyingAnimation == null){
+			dyingAnimation = new Animation(16, 0, 0.3d);
+		}
+		
+		if(isDying){			
+			dyingAnimation.tick(Engine.instance.dh.deltaTime);
+			if(dyingAnimation.frame > 0){
+				sce.entitiesToRemove.Add(this);
+			}
+			
+			time += Engine.instance.dh.deltaTime;
+			if(time > maxTime){
+				time = 0d;
+				
+				sce.pd.add(new BloodParticle(sce, this));
+				
+				maxTime = getRandomCasual(sce, 0.3d, 1d);
+			}
+		}
+	}
+	
+	public override int getAnimationFrame(Scene sce){
+		if(isDying){
+			return 4;
+		}
+		
+		if(state == EntityState.idle){
+			return sce.idleAnimation.frame;
+		}else if(state == EntityState.moving){
+			return sce.runningAnimation.frame;
+		}
+		
+		return 0;
+	}
+}

@@ -19,15 +19,9 @@ class DoorParticle : Particle{
 	float _ml;
 	protected override float maxLife => _ml;
 	
-	public DoorParticle(Vector2d p){
-		position = (Vector2) (p + new Vector2d(getRandom(-0.5f, 0.5f), getRandom(-0.5f, 0.5f)));
-		_ml = (float) getRandom(0.4, 0.65);
-		_r = (float) getRandom(-25, 25);
-	}
-	
-	public override bool draw(Renderer ren){
-		base.drawWorld(ren);
-		
-		return base.draw(ren);
+	public DoorParticle(Vector2 p){
+		position = p + new Vector2(getRandom(-0.5f, 0.5f), getRandom(-0.5f, 0.5f));
+		_ml = getRandom(0.4f, 0.65f);
+		_r = getRandom(-25f, 25f);
 	}
 }

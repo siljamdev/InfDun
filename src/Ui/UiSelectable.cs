@@ -6,7 +6,7 @@ abstract class UiSelectable : UiElement{
 	
 	public bool selected;
 	
-	public override bool canHaveDescription => true;
+	protected override bool canHaveDescription => true;
 	
 	public UiSelectable(Placement p, Vector2 o) : base(p, o){}
 	

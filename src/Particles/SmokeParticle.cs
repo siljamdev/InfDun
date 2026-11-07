@@ -19,20 +19,14 @@ class SmokeParticle : Particle{
 	float _ml;
 	protected override float maxLife => _ml;
 	
-	public SmokeParticle(Vector2d p){
-		position = (Vector2) (p + new Vector2d(-0.25f + getRandom(-0.5f, 0.5f), getRandom(-0.5f, 0.5f)));
-		_ml = (float) getRandom(1.6, 4.2);
+	public SmokeParticle(Vector2 p){
+		position = p + new Vector2(-0.25f + getRandom(-0.5f, 0.5f), getRandom(-0.5f, 0.5f));
+		_ml = getRandom(1.6f, 4.2f);
 		
 		byte gray = (byte) (90 + rand.Next(50));
 		_c = new Color3(gray, gray, gray);
 		
-		_s = (float) getRandom(0.1f, 0.25f);
-		_a = (float) getRandom(0.2f, 0.5f);
-	}
-	
-	public override bool draw(Renderer ren){
-		base.drawWorld(ren);
-		
-		return base.draw(ren);
+		_s = getRandom(0.1f, 0.25f);
+		_a = getRandom(0.2f, 0.5f);
 	}
 }

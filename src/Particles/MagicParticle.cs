@@ -22,16 +22,10 @@ class MagicParticle : Particle{
 	float _ml;
 	protected override float maxLife => _ml;
 	
-	public MagicParticle(Vector2d p){
-		position = (Vector2) (p + new Vector2d(getRandom(-0.2f, 0.2f), getRandom(-0.2f, 0.2f)));
-		_ml = (float) getRandom(0.4, 1.1);
-		_f = new Vector2((float) getRandom(-0.1f, 0.1f), (float) getRandom(0.1f, 0.5f));
-		_r = (float) getRandom(-60, 60);
-	}
-	
-	public override bool draw(Renderer ren){
-		base.drawWorld(ren);
-		
-		return base.draw(ren);
+	public MagicParticle(Vector2 p){
+		position = p + new Vector2(getRandom(-0.2f, 0.2f), getRandom(-0.2f, 0.2f));
+		_ml = getRandom(0.4f, 1.1f);
+		_f = new Vector2(getRandom(-0.1f, 0.1f), getRandom(0.1f, 0.5f));
+		_r = getRandom(-60f, 60f);
 	}
 }

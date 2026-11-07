@@ -6,6 +6,7 @@ out vec2 TexCoord;
 
 uniform float iTime;
 uniform vec2 iResolution;
+uniform vec2 iMouse;
 
 void main()
 {
@@ -14,6 +15,7 @@ void main()
 	t.x *= iResolution.x/iResolution.y;
 	t *= 2.;
 	t -= vec2(-iTime*0.12, iTime*0.09);
+	t += vec2(iMouse.x, -iMouse.y) * 0.00008;
 	t.y = 1.0 - t.y;
 	
 	t += vec2(10., 2.);

@@ -18,15 +18,9 @@ class SplashParticle : Particle{
 	float _ml;
 	protected override float maxLife => _ml;
 	
-	public SplashParticle(Vector2d p){
-		position = (Vector2) p;
-		_ml = (float) getRandom(0.2, 0.4);
-		_p = (Vector2) new Vector2d(getRandom(-0.3, 0.3), getRandom(0.05, 0.3));
-	}
-	
-	public override bool draw(Renderer ren){
-		base.drawWorld(ren);
-		
-		return base.draw(ren);
+	public SplashParticle(Vector2 p){
+		position = p;
+		_ml = getRandom(0.2f, 0.4f);
+		_p = new Vector2(getRandom(-0.3f, 0.3f), getRandom(0.05f, 0.3f));
 	}
 }

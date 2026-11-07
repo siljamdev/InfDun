@@ -61,37 +61,35 @@ class UiScreen{
 		errorText?.setText(s);
 	}
 	
-	public void draw(Renderer ren, bool doHover){
-		Vector2d mouse = ren.cam.mouseLastPos - new Vector2d(ren.width / 2f, ren.height / 2f);
-		mouse.Y = -mouse.Y;
+	public void draw(UIRenderer uren, bool doHover){
+		Vector2 mouse = uren.mousePosition;
 		
 		foreach(UiElement b in elements){
 			if(b.needsToUpdate){
-				b.update(ren);
+				b.update(uren);
 			}
 			if(b.isActive){
-				b.drawScissored(ren, mouse);
+				b.drawScissored(uren, mouse);
 			}
 		}
 		
 		if(doHover){
 			foreach(UiElement b in elements){
-				if(b.isActive && b.box != null && b.box % mouse){
-					b.drawHover(ren, mouse);
+				if(b.isActive && b.box != null && b.box.collide(mouse)){
+					b.drawHover(uren, mouse);
 					break;
 				}
 			}
 		}
 	}
 	
-	public bool click(Renderer ren, bool shiftPressed){
-		Vector2d mouse = ren.cam.mouseLastPos - new Vector2d(ren.width / 2f, ren.height / 2f);
-		mouse.Y = -mouse.Y;
+	public bool click(UIRenderer uren, bool shiftPressed){
+		Vector2 mouse = uren.mousePosition;
 		
 		//Last ones are rendered on top
 		for(int i = elements.Count - 1; i >= 0; i--){
 			UiElement b = elements[i];
-			if(b.isActive && b.box != null && b.box % mouse){
+			if(b.isActive && b.box != null && b.box.collide(mouse)){
 				if(b is UiSelectable s){
 					if(selected != null){
 						selected.selected = false;
@@ -114,12 +112,12 @@ class UiScreen{
 					}
 				}
 				
-				ren.uipr.add(new MouseParticle(mouse));
-				ren.uipr.add(new MouseParticle(mouse));
-				ren.uipr.add(new MouseParticle(mouse));
-				ren.uipr.add(new MouseParticle(mouse));
+				uren.uipd.add(new MouseParticle(mouse));
+				uren.uipd.add(new MouseParticle(mouse));
+				uren.uipd.add(new MouseParticle(mouse));
+				uren.uipd.add(new MouseParticle(mouse));
 				if(uiSounds){
-					ren.dun.sm.playNonPositional(clickSound.get(rand), 0.5f, 0.8f + (float)rand.NextDouble() * 0.1f);
+					Engine.instance.sm.playNonPositional(clickSound.get(rand), 0.5f, 0.8f + (float)rand.NextDouble() * 0.1f);
 				}
 				return true;
 			}
@@ -161,7 +159,7 @@ class UiScreen{
 		return false;
 	}
 	
-	public void close(Renderer ren){
+	public void close(){
 		if(selected != null){
 			selected.selected = false;
 			selected = null;
@@ -174,9 +172,9 @@ class UiScreen{
 		closeAction?.Invoke();
 	}
 	
-	public void updateProj(Renderer ren){
+	public void updateProj(UIRenderer uren){
 		foreach(UiElement b in elements){
-			b.update(ren);
+			b.update(uren);
 		}
 	}
 }

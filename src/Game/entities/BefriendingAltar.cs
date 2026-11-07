@@ -1,0 +1,78 @@
+using System;
+using OpenTK;
+using OpenTK.Graphics.OpenGL;
+using OpenTK.Mathematics;
+
+class BefriendingAltar : Inanimate{
+	static Sound altarSound;
+	
+	public static void initialize(Sound s){
+		altarSound = s;
+	}
+	
+	protected override int atlasRow => 12;
+	
+	bool active;
+	
+	double time;
+	double maxTime;
+	
+	public BefriendingAltar(Vector2i p) : base(p){
+		active = true;
+	}
+	
+	public override bool canPlayerInteract(Scene sce){
+		if(!active){
+			return false;
+		}
+		if(distance(sce.p) > 1.5f){
+			return false;
+		}
+		return true;
+	}
+	
+	protected override bool doPlayerInteract(Scene sce){
+		Entity[] possible = sce.entitiesLiving.Where(n => n is Goblin).OrderBy(n => n.distance(this)).ToArray();
+		if(possible.Length == 0){
+			return false;
+		}
+		Goblin b = (Goblin) possible[0];
+		
+		b.befriend(sce);
+		
+		active = false; //Single use
+		
+		sce.sm.play(altarSound, new Vector3(position.X, position.Y, 0f), 0.9f, 0.6f + (float)sce.randCasual.NextDouble() * 0.8f);
+		
+		int c = sce.randCasual.Next(5) + 3;
+		for(int i = 0; i < c; i++){
+			sce.pd.add(new FriendParticle(position + new Vector2(0f, 0.5f)));
+		}
+		
+		c = sce.randCasual.Next(5) + 3;
+		for(int i = 0; i < c; i++){
+			sce.pd.add(new FriendParticle(sce.p.position + new Vector2(0f, 0.5f)));
+		}
+		
+		return true;
+	}
+	
+	public override void draw(Scene sce){
+		base.draw(sce);
+		
+		if(active){
+			time += Engine.instance.dh.deltaTime;
+			if(time > maxTime){
+				time = 0d;
+				
+				sce.pd.add(new FriendParticle(position + new Vector2(0f, 0.5f)));
+				
+				maxTime = getRandomCasual(sce, 0.8d, 4d);
+			}
+		}
+	}
+	
+	public override int getAnimationFrame(Scene sce){
+		return active ? 0 : 1;
+	}
+}

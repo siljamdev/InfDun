@@ -45,11 +45,12 @@ class LevelGenerator{
 	public (int[,], List<Entity>, Vector2i, Vector2i) generate(){
 		//Size
 		int l = Math.Min(levelNum, 10);
-		width = 30 + l * 12 + rand.Next(5 * l);
-		height = 30 + l * 12 + rand.Next(5 * l);
+		width = 30 + l * 10 + rand.Next(5 * l);
+		height = 30 + l * 10 + rand.Next(5 * l);
 		
 		grid = new GridElement[height, width];
 		
+		//hasNecromancer = levelNum > 6 && rand.Next(2) == 0;
 		hasNecromancer = levelNum > 6 && rand.Next(2) == 0;
 		
 		//Room count
@@ -341,7 +342,7 @@ class LevelGenerator{
 		
 		switch(roomPopulator.get(rand)){
 			case 0: //Empty + Frogs
-			if(r.isWet && rand.Next(12) == 0){
+			if(r.isWet && rand.Next(10) == 0){
 				int c2 = 1 + rand.Next(3);
 				for(int i = 0; i < c2; i++){
 					ents.Add(new Frog(getAvailablePos(r), casual));
@@ -567,6 +568,8 @@ class LevelGenerator{
 					return Tile.Pots;
 				}else if(r.isWet){
 					return casual.Next(3) == 0 ? Tile.SmallPuddle : Tile.Puddle;
+				}else if(casual.Next(5) == 0){
+					return Tile.Crack;
 				}
 			}
 			return Tile.Floor;

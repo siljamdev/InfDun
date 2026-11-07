@@ -19,18 +19,12 @@ class VoidParticle : Particle{
 	float _ml;
 	protected override float maxLife => _ml;
 	
-	public VoidParticle(Vector2d p, Vector2d dir){
-		position = (Vector2) p;
-		_ml = (float) getRandom(1.2, 4.2);
+	public VoidParticle(Vector2 p, Vector2 dir){
+		position = p;
+		_ml = getRandom(1.2f, 4.2f);
 		byte gray = (byte) rand.Next(180);
 		_c = new Color3(gray, gray, gray);
-		_d = (Vector2) dir + new Vector2((float) getRandom(-1.5f, 1.5f), (float) getRandom(-1.5f, 1.5f));
-		_s = (float) getRandom(0.03f, 0.12f);
-	}
-	
-	public override bool draw(Renderer ren){
-		base.drawWorld(ren);
-		
-		return base.draw(ren);
+		_d = dir + new Vector2(getRandom(-1.5f, 1.5f), getRandom(-1.5f, 1.5f));
+		_s = getRandom(0.03f, 0.12f);
 	}
 }

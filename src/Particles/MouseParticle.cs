@@ -22,15 +22,9 @@ class MouseParticle : Particle{
 	float _ml;
 	protected override float maxLife => _ml;
 	
-	public MouseParticle(Vector2d p){
-		position = (Vector2) (p + new Vector2d(getRandom(-20f, 20f), getRandom(-20f, 20f)));
-		_ml = (float) getRandom(0.4, 0.8);
-		_r = (float) getRandom(-110, 110);
-	}
-	
-	public override bool draw(Renderer ren){
-		base.drawLocal(ren);
-		
-		return base.draw(ren);
+	public MouseParticle(Vector2 p){
+		position = p + new Vector2(getRandom(-20f, 20f), getRandom(-20f, 20f));
+		_ml = getRandom(0.4f, 0.8f);
+		_r = getRandom(-110f, 110f);
 	}
 }

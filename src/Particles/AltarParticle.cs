@@ -19,16 +19,10 @@ class AltarParticle : Particle{
 	float _ml;
 	protected override float maxLife => _ml;
 	
-	public AltarParticle(Vector2d p){
-		position = (Vector2) (p + new Vector2d(getRandom(-0.5f, 0.5f), getRandom(-0.5f, 0.5f)));
-		_ml = (float) getRandom(0.6, 1.2);
+	public AltarParticle(Vector2 p){
+		position = p + new Vector2(getRandom(-0.5f, 0.5f), getRandom(-0.5f, 0.5f));
+		_ml = getRandom(0.6f, 1.2f);
 		_c = new Color3((byte) rand.Next(256), (byte) rand.Next(256), (byte) rand.Next(256));
-		_f = (float) getRandom(-0.5f, 0.5f);
-	}
-	
-	public override bool draw(Renderer ren){
-		base.drawWorld(ren);
-		
-		return base.draw(ren);
+		_f = getRandom(-0.5f, 0.5f);
 	}
 }

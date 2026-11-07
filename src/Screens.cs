@@ -1,39 +1,38 @@
 using System.Diagnostics;
 using OpenTK.Mathematics;
 using AshLib;
+using AshLib.AshFiles;
 
 using Keys = OpenTK.Windowing.GraphicsLibraryFramework.Keys;
 
-partial class Dungeon{
-	UiScreen mainMenu;
-	UiText mainHighscoreText;
-	
-	UiScreen infoMenu;
-	
-	UiScreen helpMenu;
+class Screens{
+	public UiScreen mainMenu;
+	public UiScreen infoMenu;
+	public UiScreen helpMenu;
 	
 	public UiScreen[] optionsPages;
 	public UiScreen[] controlsPages;
 	
+	public UiScreen pauseMenu;
+	
 	UiScreen optionsMenu => optionsPages[0];
 	UiScreen controlsMenu => controlsPages[0];
 	
-	UiScreen pauseMenu;
-	
-	UiScreen deathMenu;
+	public UiScreen deathMenu;
 	UiText deathScoreText;
-	UiText deathHighscoreText;
 	UiText deathLevelnumText;
 	
-	void initializeScreens(){
-		mainHighscoreText = new UiText(Placement.BottomCenter, 0f, 20f, "Highscore: -1").setColor(Renderer.highscoreColor);
+	public Screens(Engine eng, UIRenderer ren){
+		AshFile config = eng.config;
+		
+		UiText mainHighscoreText = new UiText(Placement.BottomCenter, 0f, 20f, "Highscore: -1").setColor(Renderer.highscoreColor);
 		
 		mainMenu = new UiScreen(
 			new UiImage(Placement.TopCenter, 0, 20, 110, 110, "icon").setColor(Color3.White),
 			mainHighscoreText,
-			new UiButton(Placement.Center, 0, -1f * Renderer.separation, 300f, "Play").setAction(setNewScene),
+			new UiButton(Placement.Center, 0, -1f * Renderer.separation, 300f, "Play").setAction(eng.setNewScene),
 			new UiButton(Placement.Center, 0, 0, 300f, "Options").setAction(() => ren.setScreen(optionsMenu)),
-			new UiButton(Placement.Center, 0, 2f * Renderer.separation, 300f, "Exit").setColor(Renderer.greenButtonColor).setAction(Close),
+			new UiButton(Placement.Center, 0, 2f * Renderer.separation, 300f, "Exit").setColor(Renderer.greenButtonColor).setAction(eng.Close),
 			new UiImageButton(Placement.BottomRight, 0, 0, 35f, 35f, "info").setAction(() => ren.setScreen(infoMenu)).setDescription("Info"),
 			new UiImageButton(Placement.BottomLeft, 0, 0, 35f, 35f, "help").setAction(() => ren.setScreen(helpMenu)).setDescription("Help")
 		);
@@ -41,7 +40,7 @@ partial class Dungeon{
 		infoMenu = new UiScreen(
 			new UiText(Placement.TopCenter, 0f, 20f, "Info").setColor(Renderer.titleTextColor),
 			new UiText(Placement.TopCenter, 0f, 3f * Renderer.textSize.Y, "InfDun, created by siljamdev").setColor(Renderer.selectedTextColor),
-			new UiText(Placement.TopCenter, 0f, 4f * Renderer.textSize.Y, "Version v" + version).setColor(Renderer.selectedTextColor),
+			new UiText(Placement.TopCenter, 0f, 4f * Renderer.textSize.Y, "Version v" + Engine.version).setColor(Renderer.selectedTextColor),
 			new UiText(Placement.TopCenter, 0f, 6f * Renderer.textSize.Y, "Based on Generic game template by siljamdev").setColor(Renderer.selectedTextColor),
 			new UiButton(Placement.BottomCenter, 0f, 2f * Renderer.separation, 300f, "GitHub").setAction(() => openUrl("https://github.com/siljamdev/InfDun")),
 			new UiButton(Placement.BottomCenter, 0f, 1f * Renderer.separation, 300f, "Close").setColor(Renderer.redButtonColor).setAction(ren.closeScreen)
@@ -68,7 +67,7 @@ partial class Dungeon{
 					"Small tip: never kill frogs"
 		));
 		
-		(string key, object value, string description)[] options = getConfigurableOptions();
+		(string key, object value, string description)[] options = eng.getConfigurableOptions();
 		List<UiElement> optionsFields = new(options.Length);
 		
 		const int optionsPerPage = 6;
@@ -89,22 +88,28 @@ partial class Dungeon{
 				}else if(value is float){
 					if(float.TryParse(((UiField) optionsFields[i]).text, out float f)){
 						config.Set(key, f);
+						((UiField) optionsFields[i]).setTextColor(Renderer.fieldTextColor, Renderer.selectedTextColor, Renderer.textColor); //Reset colors
 					}else{
 						optionsErrorText.setText("Invalid float: " + description);
+						((UiField) optionsFields[i]).setTextColor(Renderer.redTextColor, Renderer.redTextColor, Renderer.redTextColor);
 						hasError = true;
 					}
 				}else if(value is int){
 					if(int.TryParse(((UiField) optionsFields[i]).text, out int f)){
 						config.Set(key, f);
+						((UiField) optionsFields[i]).setTextColor(Renderer.fieldTextColor, Renderer.selectedTextColor, Renderer.textColor); //Reset colors
 					}else{
 						optionsErrorText.setText("Invalid int: " + description);
+						((UiField) optionsFields[i]).setTextColor(Renderer.redTextColor, Renderer.redTextColor, Renderer.redTextColor);
 						hasError = true;
 					}
 				}else if(value is Color3){
 					if(Color3.TryParse(((UiField) optionsFields[i]).text, out Color3 f)){
 						config.Set(key, f);
+						((UiField) optionsFields[i]).setTextColor(Renderer.fieldTextColor, Renderer.selectedTextColor, Renderer.textColor); //Reset colors
 					}else{
 						optionsErrorText.setText("Invalid color: " + description);
+						((UiField) optionsFields[i]).setTextColor(Renderer.redTextColor, Renderer.redTextColor, Renderer.redTextColor);
 						hasError = true;
 					}
 				}
@@ -115,15 +120,15 @@ partial class Dungeon{
 			if(!hasError){
 				optionsErrorText.setText("");
 				config.Save();
-				loadConfig();
+				eng.loadConfig();
 				
-				ren.setCornerInfo("Saved config", Renderer.selectedTextColor);
+				Engine.instance.iren.setCornerInfo("Saved config", Renderer.selectedTextColor);
 			}
 		}
 		
 		//Helper
 		void resetOptions(){
-			resetConfig();
+			eng.resetConfig();
 			
 			int i = 0;
 			foreach((string key, object value, string description) in options){
@@ -173,7 +178,7 @@ partial class Dungeon{
 			int s = j; //For lambdas, j cant be used, because a reference to the changing varible is kept
 			
 			pageElements.Add(new UiImageButton(Placement.BottomLeft, 0f, 0f, 35f, 35f, "file").setAction(() => {
-				openFolder(dep.path);
+				openFolder(eng.dep.path);
 			}).setDescription("Open data directory"));
 			
 			pageElements.Add(new UiButton(Placement.BottomCenter, 0f, 3f * Renderer.separation, 300f, "Controls").setAction(() => ren.setScreen(controlsPages[0])));
@@ -219,8 +224,8 @@ partial class Dungeon{
 				i++;
 			}
 			
-			controlsElements.Add(new UiButton(Placement.BottomCenter, -79f, 2f * Renderer.separation, 142f, "Save").setColor(Renderer.greenButtonColor).setAction(saveControls));
-			controlsElements.Add(new UiButton(Placement.BottomCenter, 79f, 2f * Renderer.separation, 142f, "Reset").setAction(resetControls));
+			controlsElements.Add(new UiButton(Placement.BottomCenter, -79f, 2f * Renderer.separation, 142f, "Save").setColor(Renderer.greenButtonColor).setAction(eng.saveControls));
+			controlsElements.Add(new UiButton(Placement.BottomCenter, 79f, 2f * Renderer.separation, 142f, "Reset").setAction(eng.resetControls));
 			controlsElements.Add(new UiButton(Placement.BottomCenter, 0f, 1f * Renderer.separation, 300f, "Close").setColor(Renderer.redButtonColor).setAction(ren.closeScreen));
 			
 			int s = j;
@@ -249,32 +254,39 @@ partial class Dungeon{
 			new UiText(Placement.TopCenter, 0f, 20f, "Pause").setColor(Renderer.titleTextColor),
 			new UiButton(Placement.Center, 0f, -1f * Renderer.separation, 300f, "Close").setColor(Renderer.redButtonColor).setAction(ren.closeScreen),
 			new UiButton(Placement.Center, 0f, 0f, 300f, "Options").setAction(() => ren.setScreen(optionsMenu)),
-			new UiButton(Placement.Center, 0f, 2f * Renderer.separation, 300f, "Exit to menu").setColor(Renderer.greenButtonColor).setAction(closeScene),
+			new UiButton(Placement.Center, 0f, 2f * Renderer.separation, 300f, "Exit to menu").setColor(Renderer.greenButtonColor).setAction(eng.closeScene),
 			new UiImageButton(Placement.CenterLeft, 0f, 0f, 35f, 35f, "screenshot").setAction(() => {
 				ren.closeScreen();
-				takeScreenshotNextTick = true;
+				eng.takeScreenshotNextFrame = true;
 			}).setDescription("Take screenshot")
 		);
 		
 		deathScoreText = new UiText(Placement.Center, 0f, -10f, "Score: -1").setCharSize(Renderer.middleTextSize);
 		deathLevelnumText = new UiText(Placement.Center, 0f, 40f, "Level -1");
-		deathHighscoreText = new UiText(Placement.BottomCenter, 0f, 20f, "Highscore: -1").setColor(Renderer.highscoreColor);
+		
+		UiText deathHighscoreText = new UiText(Placement.BottomCenter, 0f, 20f, "Highscore: -1").setColor(Renderer.highscoreColor);
 		
 		deathMenu = new UiScreen(
 			new UiText(Placement.Center, 0f, -80f, "You died").setColor(Color3.Red).setCharSize(Renderer.bigTextSize),
 			deathScoreText,
 			deathLevelnumText,
 			deathHighscoreText,
-			new UiButton(Placement.Center, -118f, 3f * Renderer.separation, 220f, "Return to menu").setColor(Renderer.redButtonColor).setAction(closeScene),
-			new UiButton(Placement.Center, 118f, 3f * Renderer.separation, 220f, "Play again").setColor(Renderer.redButtonColor).setAction(setNewScene)
+			new UiButton(Placement.Center, -118f, 3f * Renderer.separation, 220f, "Return to menu").setColor(Renderer.redButtonColor).setAction(eng.closeScene),
+			new UiButton(Placement.Center, 118f, 3f * Renderer.separation, 220f, "Play again").setColor(Renderer.redButtonColor).setAction(eng.setNewScene)
 		);
+		
+		//Update high score
+		eng.onHighscoreUpdate += s => {
+			mainHighscoreText.setText("Highscore: " + s);
+			deathHighscoreText.setText("Highscore: " + s);
+		};
 	}
 	
-	public void setDeathScreen(int score, int levelNum){
+	public UiScreen getDeathScreen(int score, int levelNum){
 		deathScoreText.setText("Score: " + score);
 		deathLevelnumText.setText("Level " + levelNum);
 		
-		ren.setScreen(deathMenu);
+		return deathMenu;
 	}
 	
 	static void openUrl(string url){

@@ -21,15 +21,9 @@ class FriendParticle : Particle{
 	float _ml;
 	protected override float maxLife => _ml;
 	
-	public FriendParticle(Vector2d p){
-		position = (Vector2) (p + new Vector2d(getRandom(-0.3f, 0.3f), getRandom(-0.3f, 0.3f)));
-		_ml = (float) getRandom(0.4, 0.9);
+	public FriendParticle(Vector2 p){
+		position = p + new Vector2(getRandom(-0.3f, 0.3f), getRandom(-0.3f, 0.3f));
+		_ml = getRandom(0.4f, 0.9f);
 		_c = rand.Next(2) == 0 ? col : col2;
-	}
-	
-	public override bool draw(Renderer ren){
-		base.drawWorld(ren);
-		
-		return base.draw(ren);
 	}
 }

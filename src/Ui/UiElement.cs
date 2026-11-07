@@ -16,10 +16,17 @@ abstract class UiElement{
 	//To not have to update it always
 	protected Vector2 pos{get; private set;}
 	protected Vector2 size{get; set;} //Graphical size. DONT SET DIRECTLY!!! ONLY SET DIRECTLY ON INIT!!!
-	public AABB box{get; private set;}
+	public AABB2D box{get; private set;}
 	
-	public virtual bool canHaveDescription => false;
-	public virtual bool doScissor => true;
+	protected virtual bool canHaveDescription => false;
+	protected virtual bool doScissor => true;
+	
+	//Useful to avoid writing Engine.instance...
+	protected static RectDrawer2D rd => Engine.instance.rd;
+	protected static TextureDrawer2D td => Engine.instance.td;
+	protected static FontDrawer2D fd => Engine.instance.fd;
+	protected static int width => Engine.instance.width;
+	protected static int height => Engine.instance.height;
 	
 	public UiElement(Placement p, Vector2 o){
 		placement = p;
@@ -57,12 +64,12 @@ abstract class UiElement{
 	public UiElement(Placement p, float x, float y) : this(p, new Vector2(x, y)){}
 	
 	public void update(Renderer ren){
-		size = updateSize(ren);
-		pos = updatePos(ren);
-		box = updateBox(ren);
+		size = updateSize();
+		pos = updatePos();
+		box = updateBox();
 		
 		if(description != null && descriptionXsize == null){
-			descriptionXsize = ren.fr.getXsize(description, Renderer.textSize);
+			descriptionXsize = fd.getXsize(description, Renderer.textSize);
 		}
 		
 		needsToUpdate = false;
@@ -78,8 +85,8 @@ abstract class UiElement{
 		return this;
 	}
 	
-	protected Vector2 getDefaultPos(Renderer ren){
-		Vector2 dim = new Vector2(ren.width / 2f, ren.height / 2f);
+	protected Vector2 getDefaultPos(){
+		Vector2 dim = new Vector2(width / 2f, height / 2f);
 		
 		switch(placement){
 			case Placement.TopLeft: //-1, 1
@@ -112,9 +119,9 @@ abstract class UiElement{
 		}
 	}
 	
-	public void drawScissored(Renderer ren, Vector2d mousePos){
+	public void drawScissored(Renderer ren, Vector2 mousePos){
 		if(doScissor){
-			Vector2 dim = new Vector2(ren.width / 2f, ren.height / 2f);
+			Vector2 dim = new Vector2(width / 2f, height / 2f);
 			
 			Vector2 correctedPos = pos + dim - new Vector2(0f, size.Y);
 			
@@ -128,40 +135,41 @@ abstract class UiElement{
 		}else{
 			draw(ren, mousePos);
 		}
+		
+		//new AABB2D(pos, pos + new Vector2(size.X, -size.Y)).draw(ren); //Scissor box
+		//box?.draw(ren);
 	}
 	
-	public abstract void draw(Renderer ren, Vector2d mousePos);
+	public abstract void draw(Renderer ren, Vector2 mousePos);
 	
-	protected abstract Vector2 updateSize(Renderer ren);
+	protected abstract Vector2 updateSize();
 	
-	protected virtual Vector2 updatePos(Renderer ren){
-		return getDefaultPos(ren);
+	protected virtual Vector2 updatePos(){
+		return getDefaultPos();
 	}
 	
-	protected virtual AABB updateBox(Renderer ren){
-		return canHaveDescription ? new AABB(pos.Y, pos.Y - size.Y, pos.X, pos.X + size.X) : null;
+	protected virtual AABB2D updateBox(){
+		return canHaveDescription ? new AABB2D(pos.Y, pos.Y - size.Y, pos.X, pos.X + size.X) : null;
 	}
 	
 	//Draws description
-	public void drawHover(Renderer ren, Vector2d mousePos){
+	public void drawHover(Renderer ren, Vector2 mouse){
 		if(description == null){
 			return;
 		}
 		
-		Vector2 mouse = (Vector2) mousePos;
-		
 		Vector2 dSize = new Vector2((float) descriptionXsize + 10f, Renderer.textSize.Y + 10f);
 		
-		if(mouse.X + dSize.X <= ren.width / 2f){
-			ren.drawRect(mouse.X, mouse.Y + Renderer.textSize.Y + 10f, dSize.X, dSize.Y, Renderer.black, 0.5f);
-			ren.fr.drawText(description, mouse.X + 5f, mouse.Y + Renderer.textSize.Y + 5f, Renderer.textSize, Renderer.textColor);
+		if(mouse.X + dSize.X <= width / 2f){
+			rd.draw(ren, mouse.X, mouse.Y + Renderer.textSize.Y + 10f, dSize.X, dSize.Y, Renderer.black, 0.5f);
+			fd.draw(ren, description, mouse.X + 5f, mouse.Y + Renderer.textSize.Y + 5f, Renderer.textSize, Renderer.textColor);
 		}else{
-			if((mouse.X + dSize.X) - (ren.width / 2f) <= (-ren.width / 2f) - (mouse.X - dSize.X)){
-				ren.drawRect(mouse.X, mouse.Y + Renderer.textSize.Y + 10f, dSize.X, dSize.Y, Renderer.black, 0.5f);
-				ren.fr.drawText(description, mouse.X + 5f, mouse.Y + Renderer.textSize.Y + 5f, Renderer.textSize, Renderer.textColor);
+			if((mouse.X + dSize.X) - (width / 2f) <= (-width / 2f) - (mouse.X - dSize.X)){
+				rd.draw(ren, mouse.X, mouse.Y + Renderer.textSize.Y + 10f, dSize.X, dSize.Y, Renderer.black, 0.5f);
+				fd.draw(ren, description, mouse.X + 5f, mouse.Y + Renderer.textSize.Y + 5f, Renderer.textSize, Renderer.textColor);
 			}else{
-				ren.drawRect(mouse.X - dSize.X, mouse.Y + Renderer.textSize.Y + 10f, dSize.X, dSize.Y, Renderer.black, 0.5f);
-				ren.fr.drawText(description, mouse.X - dSize.X + 5f, mouse.Y + Renderer.textSize.Y + 5f, Renderer.textSize, Renderer.textColor);
+				rd.draw(ren, mouse.X - dSize.X, mouse.Y + Renderer.textSize.Y + 10f, dSize.X, dSize.Y, Renderer.black, 0.5f);
+				fd.draw(ren, description, mouse.X - dSize.X + 5f, mouse.Y + Renderer.textSize.Y + 5f, Renderer.textSize, Renderer.textColor);
 			}
 		}
 	}

@@ -5,9 +5,9 @@ using OpenTK.Mathematics;
 using AshLib;
 using AshLib.Time;
 
-class Scene : IDisposable{
+class Scene : Renderer{
 	static Shader tileShader;
-	static Texture2D tileTexture;
+	public static Texture2D tileTexture;
 	static Texture2D tileAltTexture;
 	
 	static SoundPool bellSound;
@@ -23,10 +23,14 @@ class Scene : IDisposable{
 		Entity.initialize();
 	}
 	
-	public Camera cam{get; private set;}
-	public SoundManager sm{get; private set;}
-	public ParticleRenderer pr{get; private set;}
-	public ParticleRenderer voidpr{get; private set;}
+	public Camera2D cam{get; private set;}
+	public SoundManager sm{get; private set;} //Shared with engine
+	public ParticleDrawer pd{get; private set;}
+	public ParticleDrawer voidpd{get; private set;}
+	
+	SceneOverlay overlay; //Overlay drawer
+	
+	public bool showInteractions = false; //If possible interactions will be shown
 	
 	public int levelNum{get; private set;} = -1; //bc it will increase
 	bool altTiles;
@@ -39,7 +43,7 @@ class Scene : IDisposable{
 	//Exit descent
 	public double descentTime{get; private set;}
 	public const double descentTimeMax = 2d;
-	bool doingDescent;
+	public bool doingDescent;
 	
 	//Has already generated a new level on descent
 	bool temp;
@@ -64,19 +68,23 @@ class Scene : IDisposable{
 	
 	public bool[] transitableTiles{get; private set;} //Answers the question. is tile transitable?
 	
-	public bool[] globalTransitable{get; private set;} //Only built and used during turns, has entities positions
+	public bool[] globalTransitable{get; private set;} //Only built and used during entity turns, has entities positions
 	
 	Mesh tilesMesh;
 	
 	//Void particles counter
 	double voidTime;
-	const double voidTimeMax = 0.3d;
+	const double voidTimeMax = 0.25d;
 	
-	//Time player has been in the current level
+	const double voidStart = 300d; //In seconds, time it takes for void particles to start going towards the exit
+	const double voidEnd = 400d; //In seconds, time it takes for void particles to finish transition of going towards the exit. Max strength from this moment onwards
+	const double voidStrength = 2d; //Max strength, from normalized vector
+	
+	//Time player has been in the current level. Used for void particles
 	double startLevelTime;
-	double levelTime => Dungeon.dh.GetTime() - startLevelTime;
+	double levelTime => Engine.instance.dh.GetTime() - startLevelTime;
 	
-	public bool canMovePlayer => (!doingSmoothing) && (!doingDescent);
+	public bool canMovePlayer => (!doingSmoothing) && (!doingDescent) && (!playerDead);
 	
 	public bool playerDead;
 	
@@ -88,6 +96,7 @@ class Scene : IDisposable{
 	
 	IEnumerable<Entity> allEntities => entitiesInanimate.Concat(entitiesItems).Concat(entitiesLiving);
 	
+	//Only add when it is proper
 	public List<Entity> entitiesToRemove{get; private set;} = new();
 	public List<Entity> entitiesToAdd{get; private set;} = new();
 	
@@ -109,24 +118,28 @@ class Scene : IDisposable{
 			"Pathfinding new",  //7
 			"Skelly mfollow",  //8
 			"Frog",  //9
+			"Flee pathfinding",  //10
 		};
 		
 		public static readonly TimeTool tt = new TimeTool(categories);
 	#endif
 	
-	public Scene(Renderer ren, SoundManager s){
+	public Scene(SoundManager s){
 		Console.WriteLine("Initlializing new scene");
 		
-		cam = ren.cam;
-		sm = s;
-		pr = new ParticleRenderer();
-		voidpr = new ParticleRenderer();
-		
+		cam = new Camera2D(width, height);
 		cam.onViewChange += setView;
+		cam.updateForce(); //Trigger first view update
 		
-		//Initial update needed to set it
-		setProjection(ren.projection);
-		setView(null, EventArgs.Empty);
+		sm = s;
+		pd = new ParticleDrawer();
+		voidpd = new ParticleDrawer();
+		
+		overlay = new SceneOverlay(this);
+		
+		//Event callbacks
+		Engine.instance.onParticleActivation += particleActivation;
+		Engine.instance.onFrameEnd += endFrame;
 		
 		randSerious = new Random();
 		randCasual = new Random(randSerious.Next());
@@ -136,6 +149,7 @@ class Scene : IDisposable{
 		
 		doingDescent = false;
 		
+		//Setup animations
 		idleAnimation = new Animation(2, 0, 0.3d);
 		runningAnimation = new Animation(2, 2, 0.1d);
 		coinAnimation = new Animation(8, 0, 0.1d);
@@ -150,7 +164,7 @@ class Scene : IDisposable{
 	}
 	
 	void newLevel(){
-		//Play bell
+		//Play bell sound
 		sm.playNonPositional(bellSound.get(randCasual), 1f);
 		
 		//Increment level
@@ -160,7 +174,8 @@ class Scene : IDisposable{
 		smoothTime = 0d;
 		smoothTimeMax = 0.3d;
 		
-		startLevelTime = Dungeon.dh.GetTime();
+		//set start time
+		startLevelTime = Engine.instance.dh.GetTime();
 		
 		//Generate
 		LevelGenerator gen = new LevelGenerator(levelNum, randSerious, randCasual);
@@ -174,7 +189,8 @@ class Scene : IDisposable{
 		Necromancer.minionLimit = (levelNum - 1) / 3;
 		
 		//Clear particles
-		pr.clear();
+		pd.clear();
+		voidpd.clear();
 		
 		//Entities
 		clearEntities();
@@ -185,7 +201,7 @@ class Scene : IDisposable{
 		p.newLevel(this, startPos);
 		
 		//Set camera
-		cam.moveFast(p.position);
+		resetCam();
 		
 		//Tiles
 		tiles = m.Cast<int>().ToArray();
@@ -280,6 +296,7 @@ class Scene : IDisposable{
 		#endif
 	}
 	
+	//Tile vector coords to flat tile index
 	public int flatIndexOf(Vector2i v){
 		int x = v.Y * mapXsize + v.X;
 		if(x < 0 || x >= tiles.Length){
@@ -331,6 +348,7 @@ class Scene : IDisposable{
 		return true;
 	}
 	
+	//Only available in enetity turns!!
 	public bool isAvailableToMoveFast(Vector2i? v2){
 		if(v2 == null){
 			return false;
@@ -386,30 +404,64 @@ class Scene : IDisposable{
 			return;
 		}
 		
-		int x = (int) (cam.mouseWorldPos.X + 0.5d);
-		int y = (int) cam.mouseWorldPos.Y;
+		int x = (int) (cam.mouseWorldPosition.X + 0.5f);
+		int y = (int) cam.mouseWorldPosition.Y;
 		
 		foreach(Entity e in allEntities.Reverse()){
-			if(e != p && e.position == new Vector2i(x, y) && e.onClick(this)){
+			if(e != p && e.position == new Vector2i(x, y) && e.playerInteract(this)){
 				playerDidAction = true;
 				break;
 			}
 		}
 	}
 	
-	public bool interact(){
+	#if DEBUG_LEVELS
+		public void instaKill(){
+			if(!canMovePlayer){
+				return;
+			}
+			
+			int x = (int) (cam.mouseWorldPosition.X + 0.5f);
+			int y = (int) cam.mouseWorldPosition.Y;
+			
+			foreach(Entity e in allEntities.Reverse()){
+				if(e != p && e is Living l && e.position == new Vector2i(x, y)){
+					l.damage(10, p, this);
+					playerDidAction = true;
+					break;
+				}
+			}
+		}
+	#endif
+	
+	public bool interact(int target = 1){
 		if(!canMovePlayer){
 			return false;
 		}
 		
 		foreach(Entity e in allEntities.Reverse()){
-			if(e != p && e.onClick(this)){
-				playerDidAction = true;
-				return true;
+			if(e != p && e.canPlayerInteract(this)){
+				target--;
+				if(target == 0){
+					if(e.playerInteract(this)){
+						playerDidAction = true;
+						return true;
+					}
+					
+					return false;
+				}
 			}
 		}
 		
 		return false;
+	}
+	
+	public void skipTime(){
+		if(!canMovePlayer){
+			return;
+		}
+		
+		playerDidAction = true;
 	}
 	
 	#if DEBUG_LEVELS
@@ -418,6 +470,10 @@ class Scene : IDisposable{
 				doingDescent = true;
 				descentTime = 0d;	
 			}
+		}
+		
+		public void cheatKey(){
+			p.hasKey = true;
 		}
 	#endif
 	
@@ -454,19 +510,19 @@ class Scene : IDisposable{
 		entitiesToRemove.Clear();
 	}
 	
-	public void draw(Renderer ren){
+	public override void draw(){
 		//Add entities
 		addEntities(entitiesToAdd);
 		entitiesToAdd.Clear();
 		
 		//Update highscore
-		if(p.score > ren.dun.highscore){
-			ren.dun.highscore = p.score;
+		if(p.score > Engine.instance.highscore){
+			Engine.instance.highscore = p.score;
 		}
 		
 		//Update descent
 		if(doingDescent){
-			descentTime += Dungeon.dh.deltaTime;
+			descentTime += Engine.instance.dh.deltaTime;
 			if(descentTime > descentTimeMax){
 				if(!temp){
 					newLevel();
@@ -482,7 +538,7 @@ class Scene : IDisposable{
 		
 		//Update smooth
 		if(doingSmoothing){
-			smoothTime += Dungeon.dh.deltaTime;
+			smoothTime += Engine.instance.dh.deltaTime;
 			
 			if(smoothTime > smoothTimeMax){
 				doingSmoothing = false;
@@ -504,25 +560,25 @@ class Scene : IDisposable{
 		}
 		
 		//Update animations
-		idleAnimation.tick(Dungeon.dh.deltaTime);
-		runningAnimation.tick(Dungeon.dh.deltaTime);
-		coinAnimation.tick(Dungeon.dh.deltaTime);
+		idleAnimation.tick(Engine.instance.dh.deltaTime);
+		runningAnimation.tick(Engine.instance.dh.deltaTime);
+		coinAnimation.tick(Engine.instance.dh.deltaTime);
 		
 		//Add void particles
-		voidTime += Dungeon.dh.deltaTime;
+		voidTime += Engine.instance.dh.deltaTime;
 		if(voidTime > voidTimeMax){
 			voidTime = 0d;
 			
 			double t = levelTime; //In secs
-			Vector2d voidDirection = t >= 400d ? (Math.Min(t, 500d) - 400d) / 50d * Vector2d.Normalize(exitPos - p.position) : Vector2.Zero;
+			Vector2 voidDirection = (t >= voidStart) ? (Vector2) (voidStrength * (Math.Min(t, voidEnd) - voidStart) / (voidEnd - voidStart) * Vector2d.Normalize(exitPos - p.position)) : Vector2.Zero;
 			
-			voidpr.add(new VoidParticle(p.position + new Vector2((float) getRandomCasual(-16f, 16f), (float) getRandomCasual(-16f, 16f)), voidDirection));
-			voidpr.add(new VoidParticle(p.position + new Vector2((float) getRandomCasual(-16f, 16f), (float) getRandomCasual(-16f, 16f)), voidDirection));
-			voidpr.add(new VoidParticle(p.position + new Vector2((float) getRandomCasual(-16f, 16f), (float) getRandomCasual(-16f, 16f)), voidDirection));
+			voidpd.add(new VoidParticle(p.position + (Vector2) new Vector2d(getRandomCasual(-16f, 16f), getRandomCasual(-16f, 16f)), voidDirection));
+			voidpd.add(new VoidParticle(p.position + (Vector2) new Vector2d(getRandomCasual(-16f, 16f), getRandomCasual(-16f, 16f)), voidDirection));
+			voidpd.add(new VoidParticle(p.position + (Vector2) new Vector2d(getRandomCasual(-16f, 16f), getRandomCasual(-16f, 16f)), voidDirection));
 		}
 		
 		//Render void particles
-		voidpr.draw(ren);
+		voidpd.draw(this);
 		
 		//Draw tiles
 		tileShader.use();
@@ -539,9 +595,9 @@ class Scene : IDisposable{
 		
 		//Check for dead player
 		if(!playerDead && entitiesToRemove.Contains(p)){
-			ren.screenAlpha = 0f;
+			overlay.screenAlpha = 0f;
 			playerDead = true;
-			ren.dun.setDeathScreen(p.score, levelNum);
+			Engine.instance.uren.setScreen(Engine.instance.sc.getDeathScreen(p.score, levelNum));
 			smoothTimeMax = 0.5d;
 		}
 		
@@ -551,38 +607,40 @@ class Scene : IDisposable{
 		if(playerDead){
 			p.draw(this);
 			
-			deathTime += Dungeon.dh.deltaTime;
-			ren.screenAlpha = (float) Math.Min(deathTime/deathTimeMax * 0.6f, 0.6f);
+			deathTime += Engine.instance.dh.deltaTime;
+			overlay.screenAlpha = (float) Math.Min(deathTime/deathTimeMax * 0.6f, 0.6f);
 		}
 		
 		//Render particles
-		pr.draw(ren);
+		pd.draw(this);
 		
-		//Draw descent
-		if(doingDescent){
-			float factor = (float) (descentTime/descentTimeMax);
-			float alpha = -4f * factor * factor + 4f * factor;
-			ren.drawRect(-ren.width/2f, ren.height/2f, ren.width, ren.height, Color3.Black, alpha);
+		//Draw possible interactions
+		if(showInteractions){
+			showInteractions = false;
 			
-			string temp3 = "Level " + levelNum;
-			ren.fr.drawText(temp3, -temp3.Length / 2 * Renderer.bigTextSize.X, 0f, Renderer.bigTextSize, Renderer.textColor, alpha);
+			if(canMovePlayer){
+				drawInteractions();
+			}
 		}
 		
-		//Draw text
-		ren.fr.drawText(p.health.ToString() + "/" + p.maxHealth.ToString() , -ren.width/2f + 45f, ren.height/2f, Renderer.bigTextSize, new Color3("AA0000"));
-		string temp2 = p.score.ToString();
-		ren.fr.drawText(temp2, -temp2.Length / 2 * Renderer.middleTextSize.X, ren.height/2f, Renderer.middleTextSize, Renderer.textColor);
-		
 		//Draw overlay
-		ren.drawTexture("heart", -ren.width/2f, ren.height/2f, 40f, 40f, Color3.White);
-		if(p.hasKey){
-			ren.drawTexture("key", -ren.width/2f, ren.height/2f - 45f, 40f, 40f, Color3.White);
+		overlay.draw();
+	}
+	
+	public void drawInteractions(){
+		int i = 1;
+		foreach(Entity e in allEntities.Reverse()){
+			if(e != p && e.canPlayerInteract(this)){
+				fd.draw(this, i.ToString(), e.position.X - Renderer.sceneTextSize.X / 2f, e.position.Y + 0.5f, Renderer.sceneTextSize, Renderer.textColor, 0.65f);
+				i++;
+				
+				if(i >= 10) //Max of 9
+					break;
+			}
 		}
 	}
 	
 	public void endFrame(){
-		playerDidAction = playerDidAction;
-		
 		if(playerDidAction || playerTriedMoving || (!doingSmoothing && playerDead)){
 			turnEntities();
 			
@@ -591,14 +649,8 @@ class Scene : IDisposable{
 		}
 	}
 	
-	public void setProjection(Matrix4 m){
-		Entity.setProjection(m);
-		tileShader.setMatrix4("projection", m);
-	}
-	
-	public void setView(object s, EventArgs a){
-		Entity.setView(cam.view);
-		tileShader.setMatrix4("view", cam.view);
+	public void resetCam(){
+		cam.moveFast(p.position);
 	}
 	
 	public double getRandomCasual(double min, double max){
@@ -609,7 +661,31 @@ class Scene : IDisposable{
 		return randSerious.NextDouble() * (max - min) + min;
 	}
 	
-	public void Dispose(){
-		cam.onViewChange -= setView;
+	public void particleActivation(bool e){
+		pd.setEnabled(e);
+		voidpd.setEnabled(e);
+	}
+	
+	public void setView(Matrix4 view, float zoom){
+		tileShader.setMatrix4("view", view);
+		this.view = view;
+		this.zoom = zoom;
+		
+		Entity.setView(view);
+	}
+	
+	protected override void onResize(int width, int height){
+		projection = Matrix4.CreateOrthographic((float) width, (float) height, -1.0f, 1.0f);
+		tileShader.setMatrix4("projection", projection);
+		Entity.setProjection(projection);
+	}
+	
+	public override void Dispose(){
+		Engine.instance.onParticleActivation -= particleActivation;
+		Engine.instance.onFrameEnd -= endFrame;
+		
+		cam.Dispose();
+		overlay.Dispose();
+		base.Dispose();
 	}
 }

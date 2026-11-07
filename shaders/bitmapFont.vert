@@ -1,15 +1,15 @@
 #version 330 core
 layout (location = 0) in vec2 aPos;
 
-out vec2 TexCoord; 
+out vec2 TexCoord;
 
-uniform vec2 position; //Position in the screen
-uniform vec2 size; //Size
+uniform mat4 model;
+uniform mat4 view;
 uniform mat4 projection;
 
 uniform ivec2 glyphStructure; //Rows and columns of the font texture
 
-uniform int letters[256];
+uniform int letters[MAX_LETTERS];
 
 void main()
 {
@@ -21,10 +21,10 @@ void main()
 	TexCoord = (letterIndex + inGlyphCoords) / glyphStructure; //Output the texture coords, divided by the rows and columns so it renders properly
 	
 	//Multiply the vertex by size to scale it and sum the position. z in -1 because if it was 0 then sometimes it failed the depth test with some objects of the scene
-	vec4 p = vec4((aPos * size) + position, -1.0, 1.0);
+	vec4 p = vec4(aPos, -1.0, 1.0);
 	
-	p.x += size.x * gl_InstanceID; //Because text renders intanced, move it to the side
-	p = projection * p;
+	p.x += gl_InstanceID; //Because text renders intanced, move it to the side
+	p = projection * view * model * p;
 	
 	gl_Position = p;
 }

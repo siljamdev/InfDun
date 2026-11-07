@@ -29,14 +29,8 @@ class BloodParticle : Particle{
 		sce = s;
 		owner = l;
 		
-		position = (Vector2) new Vector2d(getRandom(-0.2f, 0.2f), 0.6d + getRandom(-0.2f, 0.2f));
-		_ml = (float) getRandom(0.4, 0.8);
-		_r = (float) getRandom(-60, 60);
-	}
-	
-	public override bool draw(Renderer ren){
-		base.drawWorld(ren);
-		
-		return base.draw(ren);
+		position = new Vector2(getRandom(-0.2f, 0.2f), 0.6f + getRandom(-0.2f, 0.2f));
+		_ml = getRandom(0.4f, 0.8f);
+		_r = getRandom(-60f, 60f);
 	}
 }

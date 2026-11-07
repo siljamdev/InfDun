@@ -6,7 +6,7 @@ abstract class UiClickable : UiElement{
 	public Action? action;
 	public Action? quickAction;
 	
-	public override bool canHaveDescription => true;
+	protected override bool canHaveDescription => true;
 	
 	public UiClickable(Placement p, Vector2 o) : base(p, o){}
 	

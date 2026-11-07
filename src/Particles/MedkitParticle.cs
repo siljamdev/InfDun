@@ -22,15 +22,9 @@ class MedkitParticle : Particle{
 	float _ml;
 	protected override float maxLife => _ml;
 	
-	public MedkitParticle(Vector2d p, bool isBlue){
-		position = (Vector2) (p + new Vector2d(getRandom(-0.5f, 0.5f), getRandom(-0.5f, 0.5f)));
-		_ml = (float) getRandom(0.4, 0.9);
+	public MedkitParticle(Vector2 p, bool isBlue){
+		position = p + new Vector2(getRandom(-0.5f, 0.5f), getRandom(-0.5f, 0.5f));
+		_ml = getRandom(0.4f, 0.9f);
 		_c = rand.Next(2) == 0 ? (isBlue ? col3 : col) : col2;
-	}
-	
-	public override bool draw(Renderer ren){
-		base.drawWorld(ren);
-		
-		return base.draw(ren);
 	}
 }

@@ -19,10 +19,4 @@ class DripParticle : Particle{
 	public DripParticle(Vector2d p){
 		position = (Vector2) (p + new Vector2d(getRandom(-0.15f, 0.15f), 1.2f));
 	}
-	
-	public override bool draw(Renderer ren){
-		base.drawWorld(ren);
-		
-		return base.draw(ren);
-	}
 }

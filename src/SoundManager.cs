@@ -140,7 +140,7 @@ class SoundManager : IDisposable{
 		
 		AlcError error2 = ALC.GetError(device);
 		while(error2 != AlcError.NoError){
-			Console.Error.WriteLine("[OpenAL Context Error] " + error);
+			Console.Error.WriteLine("[OpenAL Context Error] " + error2);
 			
 			error2 = ALC.GetError(device);
 		}
